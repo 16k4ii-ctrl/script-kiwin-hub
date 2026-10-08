@@ -1,0 +1,2710 @@
+--[[
+    Anime Apocalypse | Farm Hub
+    MAIN   : Autofarm (nearest target), Auto M1, Auto Skills (Z / X / C / V), Auto Gadget
+    AUTO   : Retry, Start, Escape, Skip Wave, Skip Cutscenes, Pickup, Contract, Choose Side, Secure Sites, Destroy Chokeholds
+    LOBBY  : Auto Create Match
+    ROLL   : Auto Roll
+    MISC   : Survival, Wait-for-kills gate order, Performance mode, Render off, Auto re-execute, Disconnect recovery
+    STATS  : runtime / kills / matches / gates / drops
+
+    PC: RightCtrl = hide/show.  Mobile: tap the round lightning bolt button (drag it to move it).
+    Drag the header to move, drag the corner grip to resize, "-" = minimize, X = close.
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CollectionService = game:GetService("CollectionService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local GuiService = game:GetService("GuiService")
+local RS = game:GetService("ReplicatedStorage")
+
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local LP = Players.LocalPlayer
+local env = (getgenv and getgenv()) or _G
+if env.__AA_CLEANUP then pcall(env.__AA_CLEANUP) end
+
+----------------------------------------------------------------------
+-- config
+----------------------------------------------------------------------
+local MIN_D, MAX_D = 1, 40
+local ENEMY_RANGE = 60                       -- skills/gadget only fire when a zombie is this close
+local KEYS = { "Z", "X", "C", "V" }          -- index in this list = ability slot number
+local GATE_OFFSET = Vector3.new(0, 0, 0)     -- where you stand relative to the gate hitbox
+local GATE_STAY = 4                          -- max seconds to wait at a gate for it to open
+local GATE_SKIP = 10                         -- if it never opens, ignore that gate for this long
+local RETRY_DELAY = 15                       -- seconds after the end screen before voting Retry
+local SURVIVE_BELOW = 0.35                   -- retreat when health drops under this fraction
+local SURVIVE_RESUME = 0.70                  -- go back to farming once health is back to this
+local SURVIVE_MAX = 20                       -- ...or after this many seconds, whichever is first
+local SURVIVE_HEIGHT = 80                    -- how far above the fight to wait
+local PICKUP_RANGE = 300                     -- same limit the game's pet uses for drops
+local SHIELD_FARM = 12                       -- Auto Destroy Chokeholds: max seconds to kill nearby enemies to break a shield first
+local LOBBY_RECHECK = 3                      -- seconds between lobby checks for auto create
+local CREATE_COOLDOWN = 5                    -- seconds between CreateMatch attempts
+local CREATE_WAIT = 25                       -- seconds to wait for a created match to start before trying again
+local RECONNECT_DELAY = 8                    -- seconds before rejoining after a disconnect
+local ROLL_DELAY = 0.1                       -- seconds between roll calls
+local SETTINGS_FILE = "AnimeApocalypse_Settings.json"
+local SCRIPT_FILE = "AnimeApocalypseFarmHub.lua" -- save this script under this name in your executor's workspace folder
+local SCRIPT_URL = ""                        -- or put a raw link to the script here for Auto re-execute
+local AUTO_SKIP_LOADING = true               -- presses the game's loading screen Skip button the moment it appears
+
+local MODES = { "Survival", "Infinite", "Raid", "Titan Defense", "Wave Defense", "Invasion", "Bizarre Pursuit", "Devil Contract", "World Boss" }
+local MAPS_BY_MODE = {
+    Survival = { "Shibuya", "Prison", "Hollow World", "Devil Gauntlet" },
+    Infinite = { "Shibuya", "Prison", "Hollow World", "Devil Gauntlet" },
+    Raid = { "Endless Fortress", "Shadow Garden", "The Wild West", "Shibuya Crossing", "Moon Castle",
+        "Flower Garden", "Throne Room", "Vampire's Nest", "Old Dungeon", "Cursed Shibuya" },
+    ["Titan Defense"] = { "Redwall" },
+    ["Wave Defense"] = { "Hidden Village" },
+    Invasion = { "Reapers Hideout" },
+    ["Bizarre Pursuit"] = { "Bizarre Canyon" },
+    ["Devil Contract"] = { "Chainsaw Devil Contract" },
+    ["World Boss"] = { "Heavenly Ascension", "Greed Colosseum" },
+}
+local DIFFICULTIES = { "Normal", "Hard", "Nightmare", "Gravewalker" }
+local NORMAL_ONLY = { Infinite = true, ["Titan Defense"] = true, ["Wave Defense"] = true, Invasion = true, ["World Boss"] = true }
+local MAP_COSTS = {
+    ["Endless Fortress"] = { Cost = 5 }, ["Shadow Garden"] = { Cost = 5 }, ["The Wild West"] = { Cost = 5 },
+    ["Shibuya Crossing"] = { Cost = 5 }, ["Moon Castle"] = { Cost = 5 }, ["Flower Garden"] = { Cost = 5 },
+    ["Throne Room"] = { Cost = 5 }, ["Vampire's Nest"] = { Cost = 5 }, ["Old Dungeon"] = { Cost = 5 },
+    ["Cursed Shibuya"] = { Cost = 5 }, ["Bizarre Canyon"] = { Cost = 5, Item = "Race Ticket" },
+}
+
+local FALLBACK_RARITIES = {
+    Ability = { "Rare", "Epic", "Legendary", "Mythic", "Supreme", "Majestic" },
+    Gadget = { "Rare", "Epic", "Legendary", "Mythic" },
+}
+
+----------------------------------------------------------------------
+-- state
+----------------------------------------------------------------------
+local state = {
+    Farm = false, M1 = false,
+    Mode = "Behind", Dist = 4,
+    Skills = false, Gadget = false,
+    Retry = false, Start = true, Escape = false, SkipWave = false, SkipCutscene = false, Pickup = false,
+    Contract = false, ContractPick = "Blood Contract",
+    Side = false, SidePick = "Quincy",
+    Sites = false,
+    Chokeholds = false,
+    Survival = false, GateWait = true, Perf = false, NoRender = false, Persist = true,
+    Keys = { Z = true, X = true, C = true, V = false },
+    -- lobby
+    LobbyCreate = false, LMode = "Survival", LMap = "Shibuya", LDiff = "Normal",
+    LMax = 6, LFriends = false,
+    Roll = false, RollSlot = "Ability", RollView = "Normal", RollStop = "Legendary",
+    RollAbilitySlot = "", RollGadgetSlot = "",
+    -- misc
+    Recover = false,
+    -- window
+    UIScale = 1,
+}
+local stats = { Runtime = 0, Kills = 0, Matches = 0, Gates = 0, Drops = 0 }
+
+-- toggles that are switched off when you close the hub with X
+local AUTOMATION = {
+    "Farm", "M1", "Skills", "Gadget", "Retry", "Start", "Escape", "SkipWave", "SkipCutscene",
+    "Pickup", "Contract", "Side", "Sites", "Chokeholds", "Survival", "Perf", "NoRender", "LobbyCreate", "Roll", "Recover",
+}
+
+local alive = true
+local closing = false
+local gateBusy = false
+local escapeActive = false
+local siteLock = nil
+local chokeTarget = nil
+local ChokeUtil = { mode = false, seen = 0 }
+local conns = {}
+local status = { gate = "Off", farm = "Idle", combat = "-", retry = "-", escape = "-",
+    lobby = "Off", roll = "Off", recover = "-", contract = "Off", side = "Off", sites = "Off",
+    choke = "Off", start = "Off" }
+local lastTry = {}
+local cdEnd = {}
+local lastFire = {}
+local lastGadget = 0
+local hoverUntil = 0
+local rollCount = 0
+local uiHooks = {}
+
+if AUTO_SKIP_LOADING then
+    task.spawn(function()
+        if LP:GetAttribute("Loaded") then return end
+        local pg = LP:WaitForChild("PlayerGui")
+        local ui = pg:WaitForChild("LoadingUI", 10)
+        local holder = ui and ui:WaitForChild("Holder", 5)
+        local skip = holder and holder:WaitForChild("Skip", 5)
+        if not skip then return end
+
+        local function press()
+            if firesignal then
+                return pcall(firesignal, skip.MouseButton1Click)
+            elseif getconnections then
+                for _, c in ipairs(getconnections(skip.MouseButton1Click)) do pcall(c.Fire, c) end
+                return true
+            end
+            return false
+        end
+
+        while alive and ui.Parent and not LP:GetAttribute("Loaded") do
+            if skip.Visible then press() end
+            task.wait(0.05)
+        end
+    end)
+end
+
+local Assets = RS:WaitForChild("Assets", 30)
+local Remotes = Assets and Assets:WaitForChild("Remotes", 30)
+local Interact = Remotes and Remotes:WaitForChild("Interact", 10)
+local UsedAbility = Remotes and Remotes:WaitForChild("UsedAbility", 10)
+local Requests = Assets and Assets:WaitForChild("Requests", 10)
+local FuncInteract = Requests and Requests:WaitForChild("FuncInteract", 10)
+local ItemsData, ReplayPolicy, RollModule, DevilContracts
+pcall(function() DevilContracts = require(Assets.Modules.DevilContracts) end)
+pcall(function() ItemsData = require(Assets.Modules.ItemsData) end)
+pcall(function() ReplayPolicy = require(Assets.Modules.ReplayPolicy) end)
+pcall(function() RollModule = require(Assets.Modules.RollModule) end)
+
+----------------------------------------------------------------------
+-- roll helpers
+----------------------------------------------------------------------
+local VALID_MODES = { Above = true, Behind = true, Below = true }
+local VALID_SLOT = { Ability = true, Gadget = true }
+local VALID_VIEW = { Normal = true, Lucky = true }
+
+local function rarityRank(name)
+    local r = RollModule and RollModule.RarityRank and RollModule.RarityRank[name]
+    if type(r) == "number" then return r end
+    for i, n in ipairs(FALLBACK_RARITIES.Ability) do
+        if n == name then return i end
+    end
+    return nil
+end
+
+local RollUtil = {}
+
+function RollUtil.rarityList(slotType)
+    local key = (slotType == "Gadget") and "Gadgets" or "Abilities"
+    local src = RollModule and RollModule.Rarities and RollModule.Rarities[key]
+    local list = {}
+    if type(src) == "table" and RollModule.RarityRank then
+        for name in pairs(src) do
+            if RollModule.RarityRank[name] then table.insert(list, name) end
+        end
+        table.sort(list, function(a, b) return RollModule.RarityRank[a] < RollModule.RarityRank[b] end)
+    end
+    if #list == 0 then
+        list = FALLBACK_RARITIES[(slotType == "Gadget") and "Gadget" or "Ability"]
+    end
+    return list
+end
+
+function RollUtil.fixChoice()
+    local list = RollUtil.rarityList(state.RollSlot)
+    for _, r in ipairs(list) do
+        if r == state.RollStop then return end
+    end
+    local top = list[#list]
+    local old, topRank = rarityRank(state.RollStop), top and rarityRank(top)
+    if old and topRank and old > topRank then
+        state.RollStop = top
+    else
+        state.RollStop = "Legendary"
+    end
+end
+
+function RollUtil.slots(slotType)
+    local data = LP:FindFirstChild("Data")
+    local v = data and data:FindFirstChild((slotType == "Gadget") and "GadgetSlots" or "AbilitySlots")
+    if not v then return nil end
+    local ok, t = pcall(HttpService.JSONDecode, HttpService, v.Value)
+    if ok and type(t) == "table" then return t end
+    return nil
+end
+
+function RollUtil.slotKeys(slotType)
+    local t = RollUtil.slots(slotType)
+    local keys = {}
+    if t then
+        for k in pairs(t) do table.insert(keys, k) end
+        table.sort(keys, function(a, b)
+            return (tonumber(tostring(a):match("%d+")) or 0) < (tonumber(tostring(b):match("%d+")) or 0)
+        end)
+    end
+    return keys
+end
+
+function RollUtil.slotLabel(slotType, key)
+    local t = RollUtil.slots(slotType)
+    local info = t and t[key]
+    if type(info) ~= "table" then return tostring(key) end
+    return ("%s: %s%s"):format(tostring(key), tostring(info.Name or "?"), info.Locked and " (locked)" or "")
+end
+
+function RollUtil.resolveSlot(slotType)
+    local t = RollUtil.slots(slotType)
+    if not t then return nil end
+    local picked = (slotType == "Gadget") and state.RollGadgetSlot or state.RollAbilitySlot
+    if picked ~= "" and type(t[picked]) == "table" then return picked, t[picked] end
+    local keys = RollUtil.slotKeys(slotType)
+    for _, k in ipairs(keys) do
+        if type(t[k]) == "table" and not t[k].Locked then return k, t[k] end
+    end
+    if keys[1] and type(t[keys[1]]) == "table" then return keys[1], t[keys[1]] end
+    return nil
+end
+
+function RollUtil.rarityOfName(slotType, name)
+    local key = (slotType == "Gadget") and "Gadgets" or "Abilities"
+    local src = RollModule and RollModule.Rarities and RollModule.Rarities[key]
+    if type(src) ~= "table" then return nil end
+    for rarity, list in pairs(src) do
+        if type(list) == "table" and table.find(list, name) then return rarity end
+    end
+    return nil
+end
+
+function RollUtil.stop(reason)
+    state.Roll = false
+    RollUtil.stopped = true
+    status.roll = reason
+    if uiHooks.refreshToggle then uiHooks.refreshToggle("Roll") end
+    if uiHooks.save then uiHooks.save() end
+end
+
+----------------------------------------------------------------------
+-- saved settings
+----------------------------------------------------------------------
+local function writeSettings(snapshot)
+    if not writefile then return end
+    pcall(function()
+        writefile(SETTINGS_FILE, HttpService:JSONEncode({ state = snapshot, stats = stats }))
+    end)
+end
+
+local saveQueued = false
+local function saveSettings()
+    if saveQueued or not writefile then return end
+    saveQueued = true
+    task.delay(0.5, function()
+        saveQueued = false
+        if not closing then writeSettings(state) end
+    end)
+end
+uiHooks.save = saveSettings
+
+local function loadSettings()
+    if not (isfile and readfile) then return end
+    local ok, data = pcall(function()
+        if isfile(SETTINGS_FILE) then
+            return HttpService:JSONDecode(readfile(SETTINGS_FILE))
+        end
+    end)
+    if not ok or type(data) ~= "table" then return end
+
+    local s = data.state
+    if type(s) == "table" then
+        for k, v in pairs(state) do
+            if k == "Keys" then
+                if type(s.Keys) == "table" then
+                    for letter in pairs(v) do
+                        if type(s.Keys[letter]) == "boolean" then v[letter] = s.Keys[letter] end
+                    end
+                end
+            elseif type(s[k]) == type(v) then
+                state[k] = s[k]
+            end
+        end
+        if type(state.Dist) ~= "number" then state.Dist = 4 end
+        state.Dist = math.clamp(math.floor(state.Dist), MIN_D, MAX_D)
+        if not VALID_MODES[state.Mode] then state.Mode = "Behind" end
+        if not VALID_SLOT[state.RollSlot] then state.RollSlot = "Ability" end
+        if not VALID_VIEW[state.RollView] then state.RollView = "Normal" end
+        if not rarityRank(state.RollStop) then state.RollStop = "Legendary" end
+        if state.SidePick ~= "Quincy" and state.SidePick ~= "Soul Reaper" then state.SidePick = "Quincy" end
+        state.LMax = math.clamp(math.floor(state.LMax), 1, 8)
+    end
+
+    local st = data.stats
+    if type(st) == "table" then
+        for k in pairs(stats) do
+            if type(st[k]) == "number" then stats[k] = st[k] end
+        end
+    end
+end
+loadSettings()
+RollUtil.fixChoice()
+
+local LobbyUtil = {}
+
+function LobbyUtil.mode()
+    if state.LMap == "Devil Gauntlet" then return "Devil Gauntlet" end
+    return state.LMode
+end
+
+local function mapsFor(mode) return MAPS_BY_MODE[mode] or { "Shibuya" } end
+local function difficultiesFor(mode)
+    if NORMAL_ONLY[mode] then return { "Normal" } end
+    return DIFFICULTIES
+end
+
+local function fixLobbyChoice()
+    if state.LMode == "Devil Gauntlet" then
+        state.LMode, state.LMap = "Survival", "Devil Gauntlet"
+    end
+    if not MAPS_BY_MODE[state.LMode] then state.LMode = "Survival" end
+
+    local maps = mapsFor(state.LMode)
+    local okMap = false
+    for _, m in ipairs(maps) do if m == state.LMap then okMap = true end end
+    if not okMap then state.LMap = maps[1] end
+
+    local diffs = difficultiesFor(LobbyUtil.mode())
+    local okDiff = false
+    for _, d in ipairs(diffs) do if d == state.LDiff then okDiff = true end end
+    if not okDiff then state.LDiff = diffs[1] end
+end
+fixLobbyChoice()
+
+function LobbyUtil.amount(item)
+    local data = LP:FindFirstChild("Data")
+    local v = data and data:FindFirstChild("Items")
+    if not v then return 0 end
+    local ok, t = pcall(HttpService.JSONDecode, HttpService, v.Value)
+    local entry = ok and type(t) == "table" and t[item]
+    return type(entry) == "table" and entry.Amount or 0
+end
+
+function LobbyUtil.cost(map, diff)
+    if DevilContracts and DevilContracts.GetTier then
+        local ok, tier = pcall(DevilContracts.GetTier, map, diff)
+        if ok and type(tier) == "table" then return DevilContracts.Currency, tier.Cost end
+    end
+    local c = MAP_COSTS[map]
+    if c then return c.Item or "Raid Ticket", c.Cost end
+    return nil
+end
+
+function LobbyUtil.contractNames()
+    local list = {}
+    local mods = DevilContracts and DevilContracts.Modifiers
+    if type(mods) == "table" then
+        for _, m in ipairs(mods) do
+            if type(m) == "table" and m.Name then table.insert(list, m.Name) end
+        end
+    end
+    if #list == 0 then list = { "No Contract", "Blood Contract", "Hell Contract" } end
+    return list
+end
+
+----------------------------------------------------------------------
+-- anti afk
+----------------------------------------------------------------------
+table.insert(conns, LP.Idled:Connect(function()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end)
+end))
+
+----------------------------------------------------------------------
+-- persistence
+----------------------------------------------------------------------
+local function loaderSource()
+    if SCRIPT_URL ~= "" then
+        return ('loadstring(game:HttpGet("%s"))()'):format(SCRIPT_URL)
+    end
+    if isfile and isfile(SCRIPT_FILE) then
+        return ('loadstring(readfile("%s"))()'):format(SCRIPT_FILE)
+    end
+    return nil
+end
+
+local lastQueue = -100
+table.insert(conns, LP.OnTeleport:Connect(function()
+    if closing then return end
+    writeSettings(state)
+    if not state.Persist or not queue_on_teleport then return end
+    if os.clock() - lastQueue < 5 then return end
+    local src = loaderSource()
+    if not src then return end
+    lastQueue = os.clock()
+    pcall(queue_on_teleport, src)
+end))
+
+----------------------------------------------------------------------
+-- helpers
+----------------------------------------------------------------------
+local function getHRP()
+    local char = LP.Character
+    return char and char:FindFirstChild("HumanoidRootPart"), char
+end
+
+local function zombiesFolder()
+    return workspace:FindFirstChild("Zombies")
+end
+
+local function zombieAlive(z)
+    if not z or not z.Parent then return false end
+    local cfg = z:FindFirstChild("Config")
+    local hp = cfg and cfg:FindFirstChild("Health")
+    local hrp = z:FindFirstChild("HumanoidRootPart")
+    return hrp ~= nil and hp ~= nil and hp.Value > 0
+end
+
+local function isBoss(z)
+    return CollectionService:HasTag(z, "Boss") or z:GetAttribute("Boss") == true
+end
+
+local function inSiteZone(z)
+    local lock = siteLock
+    if not lock then return true end
+    local hrp = z:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    local p, c = hrp.Position, lock.pos
+    return (Vector3.new(p.X, 0, p.Z) - Vector3.new(c.X, 0, c.Z)).Magnitude <= lock.radius * 0.85
+end
+
+-- always the nearest zombie
+local function pickTarget()
+    local hrp = getHRP()
+    local folder = zombiesFolder()
+    if not hrp or not folder then return nil end
+
+    local nearest, nearestD = nil, math.huge
+    for _, z in ipairs(folder:GetChildren()) do
+        if zombieAlive(z) and inSiteZone(z) then
+            local d = (z.HumanoidRootPart.Position - hrp.Position).Magnitude
+            if d < nearestD then nearest, nearestD = z, d end
+        end
+    end
+    return nearest
+end
+
+local function enemyNearby(range)
+    local hrp = getHRP()
+    local folder = zombiesFolder()
+    if not hrp or not folder then return false end
+    for _, z in ipairs(folder:GetChildren()) do
+        if zombieAlive(z) and (z.HumanoidRootPart.Position - hrp.Position).Magnitude <= range then
+            return true
+        end
+    end
+    return false
+end
+
+local function gateNum(gate)
+    return tonumber(gate.Name:match("%d+")) or 0
+end
+
+local function remaining(gateName)
+    local folder = zombiesFolder()
+    local n = 0
+    for _, z in ipairs(CollectionService:GetTagged(gateName .. "_Zombie")) do
+        if z.Parent == folder then n += 1 end
+    end
+    return n
+end
+
+local function nextGate()
+    local list = {}
+    for _, hb in ipairs(CollectionService:GetTagged("GateHitbox")) do
+        local g = hb.Parent
+        if g and g.Parent and not g:GetAttribute("Opened") then
+            table.insert(list, { gate = g, hb = hb })
+        end
+    end
+    table.sort(list, function(a, b) return gateNum(a.gate) < gateNum(b.gate) end)
+    return list[1]
+end
+
+local function gateReady(entry)
+    local n = gateNum(entry.gate)
+    for _, hb in ipairs(CollectionService:GetTagged("GateHitbox")) do
+        local g = hb.Parent
+        if g and g.Parent and gateNum(g) < n and remaining(g.Name) > 0 then
+            return false
+        end
+    end
+    return true
+end
+
+local function gateAllowed(entry)
+    return (not state.GateWait) or gateReady(entry)
+end
+
+local function tryOpen(entry)
+    local hrp = getHRP()
+    if not hrp then return end
+    local gate, hb = entry.gate, entry.hb
+
+    if firetouchinterest then
+        pcall(function()
+            firetouchinterest(hrp, hb, 0)
+            task.wait(0.05)
+            firetouchinterest(hrp, hb, 1)
+        end)
+        task.wait(0.4)
+        if gate:GetAttribute("Opened") then return end
+    end
+
+    gateBusy = true
+    local back = hrp.CFrame
+    hrp.CFrame = CFrame.new(hb.Position.X, hrp.Position.Y, hb.Position.Z)
+    task.wait(0.5)
+    if not gate:GetAttribute("Opened") then
+        hrp.CFrame = back
+    end
+    gateBusy = false
+end
+
+local function clickM1()
+    local cam = workspace.CurrentCamera
+    local vs = cam and cam.ViewportSize or Vector2.new(800, 600)
+    local x, y = vs.X * 0.5, vs.Y * 0.5
+    local ok = pcall(function()
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, true, game, 0)
+        task.wait()
+        VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 0)
+    end)
+    if not ok and mouse1click then
+        pcall(mouse1click)
+    end
+end
+
+local function findSlot(valueName, flag)
+    local data = LP:FindFirstChild("Data")
+    local v = data and data:FindFirstChild(valueName)
+    if not v then return nil end
+    local ok, t = pcall(HttpService.JSONDecode, HttpService, v.Value)
+    if not ok or type(t) ~= "table" then return nil end
+    for slot, info in pairs(t) do
+        if type(info) == "table" and info[flag] then
+            return slot, info.Name
+        end
+    end
+    return nil
+end
+
+local function gadgetRequirement(name)
+    local g = ItemsData and ItemsData.Gadgets and ItemsData.Gadgets[name]
+    return g and g.GadgetMeter
+end
+
+local function fireAbility(idx, slot, name)
+    if not Interact then return end
+    task.spawn(function()
+        pcall(Interact.FireServer, Interact, "Ability", idx, slot, name, "Began")
+        task.wait(0.06)
+        pcall(Interact.FireServer, Interact, "Ability", idx, slot, name, "Released")
+    end)
+end
+
+local function fireGadget(slot, name)
+    if not Interact then return end
+    task.spawn(function()
+        pcall(Interact.FireServer, Interact, "Gadget", slot, name, "Began")
+        task.wait(0.06)
+        pcall(Interact.FireServer, Interact, "Gadget", slot, name, "Released")
+    end)
+end
+
+local function endScreenUp()
+    local pg = LP:FindFirstChild("PlayerGui")
+    local hud = pg and pg:FindFirstChild("HUD")
+    local es = hud and hud:FindFirstChild("EndScreen")
+    return (es ~= nil and es.Visible) or workspace:FindFirstChild("GameFinished") ~= nil
+end
+
+local function inLobby()
+    local pads = workspace:FindFirstChild("Platforms")
+    return pads ~= nil and #pads:GetChildren() > 0
+end
+
+----------------------------------------------------------------------
+-- feature loops
+----------------------------------------------------------------------
+if UsedAbility then
+    table.insert(conns, UsedAbility.OnClientEvent:Connect(function(letter, duration)
+        if type(letter) == "string" and type(duration) == "number" then
+            cdEnd[letter] = os.clock() + duration
+        end
+    end))
+end
+
+-- autofarm: escape > survival > go to + open the next gate > nearest zombie
+local target
+local gateTarget, gateArriveFor, gateArriveAt
+local gateSkip = {}
+local lastGateCheck = 0
+local retreating, retreatStart, retreatPos = false, 0, nil
+
+table.insert(conns, RunService.Heartbeat:Connect(function()
+    if not state.Farm and not chokeTarget then
+        status.farm = "Off"
+        status.gate = "Off"
+        target = nil
+        retreating = false
+        gateTarget, gateArriveFor, gateArriveAt = nil, nil, nil
+        return
+    end
+    if gateBusy then return end
+    if escapeActive then
+        status.farm = "Escaping..."
+        return
+    end
+
+    local hrp, char = getHRP()
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return end
+    local now = os.clock()
+
+    if state.Survival then
+        local frac = hum.Health / math.max(hum.MaxHealth, 1)
+        if not retreating and frac < SURVIVE_BELOW then
+            retreating = true
+            retreatStart = now
+            retreatPos = hrp.Position + Vector3.new(0, SURVIVE_HEIGHT, 0)
+            target = nil
+        end
+        if retreating and (frac >= SURVIVE_RESUME or now - retreatStart > SURVIVE_MAX) then
+            retreating = false
+        end
+        if retreating then
+            hrp.CFrame = CFrame.new(retreatPos)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            status.farm = ("Recovering (%d%% hp)"):format(math.floor(frac * 100))
+            return
+        end
+    else
+        retreating = false
+    end
+
+    if now - lastGateCheck > 0.3 then
+        lastGateCheck = now
+        gateTarget = nil
+        local entry = (not siteLock and not chokeTarget) and nextGate() or nil
+        if not entry then
+            status.gate = (siteLock and "Holding a site") or (chokeTarget and "Chokehold mode") or "All gates open"
+        elseif not entry.hb.Parent then
+            status.gate = "Waiting..."
+        elseif not gateAllowed(entry) then
+            status.gate = entry.gate.Name .. ": clear previous zombies"
+        elseif now < (gateSkip[entry.gate] or 0) then
+            status.gate = entry.gate.Name .. ": skipped, retrying soon"
+        else
+            gateTarget = entry
+            status.gate = "Opening " .. entry.gate.Name
+        end
+    end
+    if gateTarget and (not gateTarget.gate.Parent or not gateTarget.hb.Parent or gateTarget.gate:GetAttribute("Opened")) then
+        gateTarget = nil
+    end
+
+    if gateTarget then
+        if gateArriveFor ~= gateTarget.gate then
+            gateArriveFor, gateArriveAt = gateTarget.gate, now
+        end
+        if now - gateArriveAt > GATE_STAY then
+            gateSkip[gateTarget.gate] = now + GATE_SKIP
+            gateTarget, gateArriveFor, gateArriveAt = nil, nil, nil
+        else
+            hrp.CFrame = CFrame.new(gateTarget.hb.Position + GATE_OFFSET)
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+            status.farm = "Opening " .. gateTarget.gate.Name
+            if now - (lastTry[gateTarget.gate] or 0) >= 3 then
+                lastTry[gateTarget.gate] = now
+                task.spawn(tryOpen, gateTarget)
+            end
+            return
+        end
+    else
+        gateArriveFor, gateArriveAt = nil, nil
+    end
+
+    if ChokeUtil.mode then
+        target = zombieAlive(chokeTarget) and chokeTarget or nil
+    elseif not zombieAlive(target) or not inSiteZone(target) then
+        target = pickTarget()
+    end
+    if not target then
+        status.farm = siteLock and "Holding site" or (ChokeUtil.mode and "Chokehold: waiting") or "No zombies alive"
+        return
+    end
+
+    local tHRP = target.HumanoidRootPart
+    local tPos = tHRP.Position
+    local mode, d = state.Mode, state.Dist
+    local cf
+
+    if mode == "Above" then
+        cf = CFrame.lookAt(tPos + Vector3.new(0, d, 0), tPos, tHRP.CFrame.LookVector)
+    elseif mode == "Below" then
+        cf = CFrame.lookAt(tPos - Vector3.new(0, d, 0), tPos, tHRP.CFrame.LookVector)
+    else -- Behind
+        local back = tPos - tHRP.CFrame.LookVector * d
+        local pos = Vector3.new(back.X, tPos.Y, back.Z)
+        cf = CFrame.lookAt(pos, Vector3.new(tPos.X, pos.Y, tPos.Z))
+    end
+
+    hrp.CFrame = cf
+    hrp.AssemblyLinearVelocity = Vector3.zero
+    hrp.AssemblyAngularVelocity = Vector3.zero
+    status.farm = ("%s%s (%s %d)"):format(isBoss(target) and "[Boss] " or "", target.Name, mode, d)
+end))
+
+table.insert(conns, RunService.Stepped:Connect(function()
+    if not state.Farm and not chokeTarget then return end
+    local char = LP.Character
+    if not char then return end
+    for _, p in ipairs(char:GetDescendants()) do
+        if p:IsA("BasePart") then
+            p.CanCollide = false
+        end
+    end
+end))
+
+-- auto M1
+task.spawn(function()
+    while alive do
+        if (state.M1 or chokeTarget) and os.clock() >= hoverUntil then
+            clickM1()
+        end
+        task.wait(0.12)
+    end
+end)
+
+-- auto skills + auto gadget
+task.spawn(function()
+    while alive do
+        local _, char = getHRP()
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local canCast = hum and hum.Health > 0 and (state.Skills or state.Gadget) and enemyNearby(ENEMY_RANGE)
+
+        if canCast then
+            if state.Skills then
+                local slot, name = findSlot("AbilitySlots", "Showcasing")
+                if slot then
+                    for idx, letter in ipairs(KEYS) do
+                        local now = os.clock()
+                        if state.Keys[letter]
+                            and now >= (cdEnd[letter] or 0)
+                            and now - (lastFire[letter] or 0) > 0.8 then
+                            lastFire[letter] = now
+                            fireAbility(idx, slot, name)
+                            status.combat = ("Cast %s  (%s)"):format(letter, name)
+                            task.wait(0.15)
+                        end
+                    end
+                end
+            end
+
+            if state.Gadget then
+                local gslot, gname = findSlot("GadgetSlots", "Equipped")
+                local meter = LP:FindFirstChild("GadgetMeter")
+                local req = gname and gadgetRequirement(gname)
+                if gslot and meter and req and meter.Value >= req and os.clock() - lastGadget > 3 then
+                    lastGadget = os.clock()
+                    fireGadget(gslot, gname)
+                    status.combat = "Gadget: " .. gname
+                end
+            end
+        end
+
+        task.wait(0.2)
+    end
+end)
+
+-- Auto Retry
+task.spawn(function()
+    local endSince, retried = nil, false
+    while alive do
+        if endScreenUp() then
+            if not endSince then
+                endSince = os.clock()
+                stats.Matches += 1
+                saveSettings()
+            end
+            if state.Retry then
+                if retried then
+                    status.retry = "Voted, waiting..."
+                elseif os.clock() - endSince < RETRY_DELAY then
+                    status.retry = ("Retrying in %ds"):format(math.ceil(RETRY_DELAY - (os.clock() - endSince)))
+                elseif not LP:GetAttribute("TeleportingOut") then
+                    local can = true
+                    if ReplayPolicy and ReplayPolicy.CanPlayAgain then
+                        local ok, res = pcall(ReplayPolicy.CanPlayAgain, workspace:FindFirstChild("MatchConfig"))
+                        if ok then can = res and true or false end
+                    end
+                    if can and Interact then
+                        retried = true
+                        pcall(Interact.FireServer, Interact, "PlayAgain")
+                        status.retry = "Retry sent"
+                    else
+                        status.retry = "Retry not available"
+                    end
+                end
+            else
+                status.retry = "Off"
+            end
+        else
+            endSince, retried = nil, false
+            status.retry = state.Retry and "Waiting for end screen" or "Off"
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Auto Escape
+local escapePrompts = {}
+local function trackPrompt(d)
+    if d:IsA("ProximityPrompt") and d.ActionText == "ESCAPE!" then
+        escapePrompts[d] = true
+    end
+end
+pcall(function()
+    for _, d in ipairs(workspace:GetDescendants()) do trackPrompt(d) end
+end)
+table.insert(conns, workspace.DescendantAdded:Connect(trackPrompt))
+
+local function activeEscapePrompt()
+    for p in pairs(escapePrompts) do
+        if not p.Parent then
+            escapePrompts[p] = nil
+        elseif p.Enabled and p:IsDescendantOf(workspace) then
+            return p
+        end
+    end
+    return nil
+end
+
+local function promptPosition(p)
+    local par = p.Parent
+    if par and par:IsA("Attachment") then return par.WorldPosition end
+    if par and par:IsA("BasePart") then return par.Position end
+    local part = par and par:FindFirstAncestorWhichIsA("BasePart")
+    return part and part.Position
+end
+
+task.spawn(function()
+    local lastFirePrompt = 0
+    while alive do
+        escapeActive = false
+        if not state.Escape then
+            status.escape = "Off"
+        elseif endScreenUp() then
+            status.escape = "Match finished"
+        else
+            local p = activeEscapePrompt()
+            local hrp, char = getHRP()
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local pos = p and promptPosition(p)
+            if p and pos and hrp and hum and hum.Health > 0 then
+                escapeActive = true
+                status.escape = "Escaping..."
+                hrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                if os.clock() - lastFirePrompt > 1.2 then
+                    lastFirePrompt = os.clock()
+                    task.wait(0.15)
+                    if fireproximityprompt then
+                        pcall(fireproximityprompt, p)
+                    else
+                        task.spawn(function()
+                            local key = p.KeyboardKeyCode
+                            pcall(function()
+                                VirtualInputManager:SendKeyEvent(true, key, false, game)
+                                task.wait(math.max(p.HoldDuration, 0) + 0.15)
+                                VirtualInputManager:SendKeyEvent(false, key, false, game)
+                            end)
+                        end)
+                    end
+                end
+            else
+                status.escape = "Waiting for escape"
+            end
+        end
+        task.wait(0.4)
+    end
+end)
+
+-- Auto Skip Wave
+task.spawn(function()
+    local lastWaveVote = 0
+    while alive do
+        if state.SkipWave and Interact then
+            local canSkip = workspace:GetAttribute("CanSkipWave")
+            local mc = workspace:FindFirstChild("MatchConfig")
+            local votesVal = mc and mc:FindFirstChild("InfiniteWaveSkipVotes")
+            if canSkip and votesVal then
+                local wave = workspace:GetAttribute("CurrentWave")
+                local interval = workspace:GetAttribute("MilestoneInterval") or 100
+                local milestone = type(wave) == "number" and wave > 0 and wave % interval == 0
+                if not milestone then
+                    local ok, votes = pcall(HttpService.JSONDecode, HttpService, votesVal.Value)
+                    local voted = ok and type(votes) == "table" and table.find(votes, LP.Name) ~= nil
+                    if not voted and os.clock() - lastWaveVote > 1.5 then
+                        lastWaveVote = os.clock()
+                        pcall(Interact.FireServer, Interact, "VoteSkipWave")
+                    end
+                end
+            end
+        end
+
+        task.wait(0.5)
+    end
+end)
+
+-- Auto Start
+do
+    local VOTES = { RaidStarting = "VoteSkipRaid", InfiniteStarting = "VoteSkipInfinite" }
+    local voted = {}
+
+    local function tryVote(attr)
+        if not workspace:GetAttribute(attr) then
+            voted[attr] = nil
+            return
+        end
+        if not state.Start or not Interact or voted[attr] then return end
+        voted[attr] = true
+        pcall(Interact.FireServer, Interact, VOTES[attr])
+        status.start = "Voted: " .. VOTES[attr]
+    end
+
+    for attr in pairs(VOTES) do
+        table.insert(conns, workspace:GetAttributeChangedSignal(attr):Connect(function() tryVote(attr) end))
+    end
+    uiHooks.startNow = function()
+        for attr in pairs(VOTES) do tryVote(attr) end
+    end
+    uiHooks.startNow()
+
+    task.spawn(function()
+        while alive do
+            if not state.Start then
+                status.start = "Off"
+            elseif not (workspace:GetAttribute("RaidStarting") or workspace:GetAttribute("InfiniteStarting")) then
+                if not tostring(status.start):find("^Voted") then status.start = "Waiting for a start vote" end
+            end
+            task.wait(0.5)
+        end
+    end)
+end
+
+-- Auto Skip Cutscenes
+do
+    local cutVoted, bossVoted = false, false
+    local hudCS, hudBoss
+
+    local function voteCut()
+        if not (state.SkipCutscene and Interact) or cutVoted then return end
+        cutVoted = true
+        pcall(Interact.FireServer, Interact, "VoteSkipCutscene")
+    end
+    local function voteBoss()
+        if not (state.SkipCutscene and Interact) or bossVoted then return end
+        bossVoted = true
+        pcall(Interact.FireServer, Interact, "VoteSkipBossCutscene")
+    end
+
+    local function check()
+        if workspace:FindFirstChild("CutsceneSkipVotes") or (hudCS and hudCS.Visible) then voteCut() end
+        local c = workspace:FindFirstChild("Cutscene")
+        if (c and c:GetAttribute("BossCutscene")) or (hudBoss and hudBoss.Visible) then voteBoss() end
+    end
+    uiHooks.cutsceneNow = check
+
+    table.insert(conns, workspace.ChildAdded:Connect(function(c)
+        if c.Name == "CutsceneSkipVotes" then
+            cutVoted = false
+            voteCut()
+        elseif c.Name == "Cutscene" and c:GetAttribute("BossCutscene") then
+            bossVoted = false
+            voteBoss()
+        end
+    end))
+    table.insert(conns, workspace.ChildRemoved:Connect(function(c)
+        if c.Name == "CutsceneSkipVotes" then
+            cutVoted = false
+        elseif c.Name == "Cutscene" then
+            bossVoted = false
+        end
+    end))
+    check()
+
+    task.spawn(function()
+        local pg = LP:WaitForChild("PlayerGui")
+        local hud = pg:WaitForChild("HUD", 30)
+        if not hud or not alive then return end
+        hudCS = hud:WaitForChild("CutsceneSkip", 30)
+        hudBoss = hud:WaitForChild("BossSkipVote", 30)
+        if hudCS then
+            table.insert(conns, hudCS:GetPropertyChangedSignal("Visible"):Connect(function()
+                if hudCS.Visible then voteCut() else cutVoted = false end
+            end))
+        end
+        if hudBoss then
+            table.insert(conns, hudBoss:GetPropertyChangedSignal("Visible"):Connect(function()
+                if hudBoss.Visible then voteBoss() else bossVoted = false end
+            end))
+        end
+        check()
+    end)
+end
+
+-- Auto Pick Contract (Devil Contract mode)
+do
+    local ContractVote = Remotes and Remotes:FindFirstChild("ContractVote")
+    local voted, openSince = false, nil
+    local VOTE_DELAY = 1
+
+    if ContractVote then
+        table.insert(conns, ContractVote.OnClientEvent:Connect(function(kind)
+            if kind == "Draw" then voted, openSince = false, nil end
+        end))
+    end
+
+    local function openVote()
+        local pg = LP:FindFirstChild("PlayerGui")
+        local hud = pg and pg:FindFirstChild("HUD")
+        local main = hud and hud:FindFirstChild("Main")
+        local cards = main and main:FindFirstChild("Cards")
+        local frame = cards and cards:FindFirstChild("CardsFrame")
+        local pick = frame and frame:FindFirstChild("Pick")
+        local container = frame and frame:FindFirstChild("Container")
+        if not (pick and container and pick.Visible) then return nil end
+        local names = {}
+        for _, c in ipairs(container:GetChildren()) do
+            if c:IsA("GuiObject") and c:GetAttribute("Contract") then
+                table.insert(names, c:GetAttribute("CardName"))
+            end
+        end
+        if #names == 0 then return nil end
+        return names, pick
+    end
+
+    task.spawn(function()
+        while alive do
+            if not state.Contract then
+                status.contract = "Off"
+            elseif not ContractVote then
+                status.contract = "Contract remote not found"
+            else
+                local names, pick = openVote()
+                if not names then
+                    voted, openSince = false, nil
+                    status.contract = "Waiting for a contract vote"
+                elseif voted then
+                    status.contract = "Voted"
+                elseif pick and tostring(pick.Text):find("^Waiting") then
+                    voted = true
+                    status.contract = "Voted"
+                else
+                    openSince = openSince or os.clock()
+                    if os.clock() - openSince >= VOTE_DELAY then
+                        local choice = table.find(names, state.ContractPick) and state.ContractPick or names[1]
+                        voted = true
+                        pcall(ContractVote.FireServer, ContractVote, choice)
+                        status.contract = "Voted: " .. tostring(choice)
+                    else
+                        status.contract = "Voting..."
+                    end
+                end
+            end
+            task.wait(0.25)
+        end
+    end)
+end
+
+-- Auto Choose Side (Invasion mode)
+task.spawn(function()
+    local VOTE_DELAY = 1
+    local openSince, lastVote = nil, 0
+    while alive do
+        if not state.Side then
+            status.side = "Off"
+            openSince = nil
+        else
+            local mc = workspace:FindFirstChild("MatchConfig")
+            local gm = mc and mc:FindFirstChild("Gamemode")
+            local open = mc and gm and gm.Value == "Invasion" and mc:GetAttribute("InvasionSideVoting")
+            if not Interact then
+                status.side = "Interact remote not found"
+            elseif not open then
+                openSince = nil
+                status.side = "Waiting for a side vote"
+            else
+                local votesVal = mc:FindFirstChild("InvasionSideVotes")
+                local ok, votes = false, nil
+                if votesVal then ok, votes = pcall(HttpService.JSONDecode, HttpService, votesVal.Value) end
+                local mine = ok and type(votes) == "table" and votes[LP.Name]
+                if mine then
+                    status.side = "Voted: " .. tostring(mine)
+                else
+                    openSince = openSince or os.clock()
+                    if os.clock() - openSince >= VOTE_DELAY then
+                        if os.clock() - lastVote > 2 then
+                            lastVote = os.clock()
+                            pcall(Interact.FireServer, Interact, "VoteInvasionSide", state.SidePick)
+                        end
+                        status.side = "Voting " .. state.SidePick .. "..."
+                    else
+                        status.side = "Vote opened..."
+                    end
+                end
+            end
+        end
+        task.wait(0.25)
+    end
+end)
+
+-- Auto Secure Sites (Invasion, Soul Reaper side)
+local SiteUtil = {}
+
+function SiteUtil.list()
+    local map = workspace:FindFirstChild("Map")
+    local folder = map and map:FindFirstChild("DefendingSites")
+    local list = {}
+    if folder then
+        for _, p in ipairs(folder:GetChildren()) do
+            if p:IsA("BasePart") then table.insert(list, p) end
+        end
+        table.sort(list, function(a, b)
+            return (a:GetAttribute("SiteIndex") or 99) < (b:GetAttribute("SiteIndex") or 99)
+        end)
+    end
+    return list
+end
+
+function SiteUtil.standCF(site)
+    local _, char = getHRP()
+    local ignore = { site.Parent }
+    if char then table.insert(ignore, char) end
+    for _, n in ipairs({ "Alive", "Zombies", "Thrown" }) do
+        local f = workspace:FindFirstChild(n)
+        if f then table.insert(ignore, f) end
+    end
+    for _, pl in ipairs(Players:GetPlayers()) do
+        if pl.Character then table.insert(ignore, pl.Character) end
+    end
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = ignore
+    local pos = site.Position
+    local hit = workspace:Raycast(pos + Vector3.new(0, 40, 0), Vector3.new(0, -90, 0), params)
+    local floorY = hit and hit.Position.Y or (pos.Y - site.Size.X / 2)
+    return CFrame.new(pos.X, floorY + 3, pos.Z)
+end
+
+task.spawn(function()
+    local arrivedSite, arrivedHrp = nil, nil
+    while alive do
+        if not state.Sites then
+            siteLock = nil
+            arrivedSite, arrivedHrp = nil, nil
+            status.sites = "Off"
+        else
+            local mc = workspace:FindFirstChild("MatchConfig")
+            local gm = mc and mc:FindFirstChild("Gamemode")
+            local hrp, char = getHRP()
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local sites = SiteUtil.list()
+
+            if not (mc and gm and gm.Value == "Invasion") then
+                siteLock = nil
+                status.sites = "Not in an Invasion"
+            elseif endScreenUp() then
+                siteLock = nil
+                status.sites = "Match finished"
+            elseif mc:GetAttribute("InvasionSideVoting") then
+                siteLock = nil
+                status.sites = "Waiting for the side vote"
+            elseif #sites == 0 then
+                siteLock = nil
+                status.sites = "No sites (Quincy side / still loading)"
+            elseif hrp and hum and hum.Health > 0 then
+                local site, secured = nil, 0
+                for _, s in ipairs(sites) do
+                    if s:GetAttribute("State") == "Secured" then
+                        secured += 1
+                    elseif not site then
+                        site = s
+                    end
+                end
+
+                if not site then
+                    siteLock = nil
+                    status.sites = ("All %d sites secured"):format(#sites)
+                else
+                    local radius = site:GetAttribute("Radius") or 40
+                    siteLock = { pos = site.Position, radius = radius }
+                    status.sites = ("%s: %s (%d/%d secured)"):format(
+                        tostring(site:GetAttribute("DisplayName") or site.Name),
+                        tostring(site:GetAttribute("State") or "Idle"), secured, #sites)
+
+                    if arrivedSite ~= site or arrivedHrp ~= hrp then
+                        arrivedSite, arrivedHrp = site, hrp
+                        hrp.CFrame = SiteUtil.standCF(site)
+                        hrp.AssemblyLinearVelocity = Vector3.zero
+                    end
+                end
+            end
+        end
+        task.wait(0.25)
+    end
+end)
+
+-- Auto Destroy Chokeholds (Invasion, Quincy side)
+ChokeUtil.NAME = "Quincy Chokehold"
+ChokeUtil.RANGE = 90
+ChokeUtil.ROMAN = { I = 1, II = 2, III = 3, IV = 4, V = 5, VI = 6, VII = 7, VIII = 8 }
+
+function ChokeUtil.label(z)
+    return tostring(z:GetAttribute("DisplayName") or z.Name)
+end
+
+function ChokeUtil.order(z)
+    local name = ChokeUtil.label(z)
+    local roman = name:match("%s(%u+)$")
+    return ChokeUtil.ROMAN[roman or ""] or tonumber(name:match("%d+")) or 99
+end
+
+function ChokeUtil.flat(a, b)
+    return (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
+end
+
+function ChokeUtil.list()
+    local out = {}
+    local folder = zombiesFolder()
+    if folder then
+        for _, z in ipairs(folder:GetChildren()) do
+            if z.Name == ChokeUtil.NAME and zombieAlive(z) then
+                table.insert(out, z)
+            end
+        end
+        table.sort(out, function(a, b) return ChokeUtil.order(a) < ChokeUtil.order(b) end)
+    end
+    return out
+end
+
+function ChokeUtil.shield(z)
+    local map = workspace:FindFirstChild("Map")
+    local folder = map and map:FindFirstChild("Chokeholds")
+    if not folder then return nil end
+    local name = z:GetAttribute("DisplayName")
+    for _, p in ipairs(folder:GetChildren()) do
+        if p:GetAttribute("DisplayName") == name then
+            local ui = p:FindFirstChild("ChokeholdUI")
+            local st = ui and ui:FindFirstChild("Status", true)
+            local text = (st and st:IsA("TextLabel")) and st.Text or ""
+            if text:find("^SHIELD") then
+                local k, n = text:match("(%d+)%s*/%s*(%d+)")
+                return true, tonumber(k) or 0, tonumber(n) or 10
+            end
+            return false
+        end
+    end
+    return nil
+end
+
+function ChokeUtil.nearestEnemy(center)
+    local folder = zombiesFolder()
+    if not folder then return nil end
+    local best, bestD = nil, math.huge
+    for _, z in ipairs(folder:GetChildren()) do
+        if z.Name ~= ChokeUtil.NAME and zombieAlive(z) then
+            local d = ChokeUtil.flat(z.HumanoidRootPart.Position, center)
+            if d <= ChokeUtil.RANGE and d < bestD then best, bestD = z, d end
+        end
+    end
+    return best
+end
+
+task.spawn(function()
+    local current, since, enemy = nil, 0, nil
+    local function release(resetSeen)
+        chokeTarget = nil
+        ChokeUtil.mode = false
+        current, enemy = nil, nil
+        if resetSeen then ChokeUtil.seen = 0 end
+    end
+
+    while alive do
+        if not state.Chokeholds then
+            release(true)
+            status.choke = "Off"
+        else
+            local mc = workspace:FindFirstChild("MatchConfig")
+            local gm = mc and mc:FindFirstChild("Gamemode")
+            local hrp, char = getHRP()
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+            if not (mc and gm and gm.Value == "Invasion") then
+                release(true)
+                status.choke = "Not in an Invasion"
+            elseif endScreenUp() then
+                release(true)
+                status.choke = "Match finished"
+            elseif mc:GetAttribute("InvasionSideVoting") then
+                release()
+                status.choke = "Waiting for the side vote"
+            elseif mc:GetAttribute("InvasionSide") == "Soul Reaper" then
+                release()
+                status.choke = "Soul Reaper side (use Auto Secure Sites)"
+            elseif not (hrp and hum and hum.Health > 0) then
+                chokeTarget = nil
+                status.choke = "Waiting to respawn"
+            else
+                local list = ChokeUtil.list()
+                ChokeUtil.seen = math.max(ChokeUtil.seen, #list)
+                local first = list[1]
+
+                if not first then
+                    release()
+                    status.choke = (ChokeUtil.seen > 0) and "All chokeholds destroyed" or "Waiting for chokeholds to spawn"
+                else
+                    local now = os.clock()
+                    if current ~= first then
+                        current, since, enemy = first, now, nil
+                    end
+
+                    local chrp = current:FindFirstChild("HumanoidRootPart")
+                    if chrp then
+                        local label = ChokeUtil.label(current)
+                        local done = ChokeUtil.seen - #list
+                        local up, kills, need = ChokeUtil.shield(current)
+                        ChokeUtil.mode = true
+
+                        if up and now - since < SHIELD_FARM then
+                            if not (enemy and zombieAlive(enemy)
+                                and ChokeUtil.flat(enemy.HumanoidRootPart.Position, chrp.Position) <= ChokeUtil.RANGE) then
+                                enemy = ChokeUtil.nearestEnemy(chrp.Position)
+                            end
+                            if enemy then
+                                chokeTarget = enemy
+                                status.choke = ("%s: breaking shield %d/%d"):format(label, kills, need)
+                            else
+                                chokeTarget = current
+                                status.choke = ("%s: waiting for enemies %d/%d"):format(label, kills, need)
+                            end
+                        else
+                            enemy = nil
+                            chokeTarget = current
+                            local cfg = current:FindFirstChild("Config")
+                            local hp = cfg and cfg:FindFirstChild("Health")
+                            local mx = cfg and cfg:FindFirstChild("MaxHealth")
+                            local pct = (hp and mx and mx.Value > 0) and math.floor(hp.Value / mx.Value * 100) or 100
+                            status.choke = ("%s: %s, %d%% hp (%d/%d done)"):format(
+                                label, up and "shield still up" or "attacking", pct, done, ChokeUtil.seen)
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.25)
+    end
+end)
+
+-- Auto Pickup
+local function dropPosition(d)
+    if d:IsA("BasePart") then return d.Position end
+    if d:IsA("Model") then
+        local hb = d:FindFirstChild("Hitbox")
+        if hb and hb:IsA("BasePart") then return hb.Position end
+        return d.PrimaryPart and d.PrimaryPart.Position
+    end
+    return nil
+end
+
+task.spawn(function()
+    local firedAt = setmetatable({}, { __mode = "k" })
+    local pending = {}
+    while alive do
+        if state.Pickup then
+            local hrp = getHRP()
+            local now = os.clock()
+            if hrp then
+                for _, drop in ipairs(CollectionService:GetTagged(LP.Name .. "GameDrops")) do
+                    if drop.Parent and (firedAt[drop] == nil or now - firedAt[drop] > 1.5) then
+                        local pos = dropPosition(drop)
+                        if pos and (pos - hrp.Position).Magnitude <= PICKUP_RANGE then
+                            local remote = drop:FindFirstChild("Pickup")
+                            if remote and remote:IsA("RemoteEvent") then
+                                firedAt[drop] = now
+                                pending[drop] = true
+                                pcall(remote.FireServer, remote)
+                            end
+                        end
+                    end
+                end
+            end
+            for drop in pairs(pending) do
+                if not drop.Parent then
+                    pending[drop] = nil
+                    stats.Drops += 1
+                end
+            end
+        end
+        task.wait(0.15)
+    end
+end)
+
+-- session stats
+task.spawn(function()
+    local lastKills = nil
+    local counted, firstScan = {}, true
+    local lastTick, lastSave = os.clock(), os.clock()
+    while alive do
+        local now = os.clock()
+        stats.Runtime += now - lastTick
+        lastTick = now
+
+        local mc = workspace:FindFirstChild("MatchConfig")
+        local ps = mc and mc:FindFirstChild("PlayersStats")
+        if ps then
+            local ok, t = pcall(HttpService.JSONDecode, HttpService, ps.Value)
+            local me = ok and type(t) == "table" and t[LP.Name]
+            if type(me) == "table" and type(me.Kills) == "number" then
+                if lastKills == nil then
+                    lastKills = me.Kills
+                elseif me.Kills >= lastKills then
+                    stats.Kills += me.Kills - lastKills
+                    lastKills = me.Kills
+                else
+                    stats.Kills += me.Kills
+                    lastKills = me.Kills
+                end
+            end
+        end
+
+        for _, hb in ipairs(CollectionService:GetTagged("GateHitbox")) do
+            local g = hb.Parent
+            if g and g:GetAttribute("Opened") and not counted[g] then
+                counted[g] = true
+                if not firstScan then stats.Gates += 1 end
+            end
+        end
+        firstScan = false
+
+        if now - lastSave > 10 then
+            lastSave = now
+            saveSettings()
+        end
+        task.wait(1)
+    end
+end)
+
+----------------------------------------------------------------------
+-- lobby: auto create match, auto roll
+----------------------------------------------------------------------
+local PlatformUtil = { claimed = nil, claimedAt = 0 }
+
+do
+    local createRemote = Remotes and Remotes:FindFirstChild("CreateMatch")
+    if createRemote then
+        table.insert(conns, createRemote.OnClientEvent:Connect(function(kind, plat)
+            if kind == "Create" and typeof(plat) == "Instance" then
+                PlatformUtil.claimed, PlatformUtil.claimedAt = plat, os.clock()
+            end
+        end))
+    end
+end
+
+function PlatformUtil.pick(map, mode)
+    local folder = workspace:FindFirstChild("Platforms")
+    if not folder then return nil end
+    local best, bestScore
+    for _, p in ipairs(folder:GetChildren()) do
+        local cfg = p:FindFirstChild("Config")
+        local taken = cfg and cfg:FindFirstChild("IsTaken")
+        local hitboxes = p:FindFirstChild("Hitboxes")
+        if taken and not taken.Value and hitboxes and hitboxes:FindFirstChildWhichIsA("BasePart") then
+            local m, md = cfg:FindFirstChild("Map"), cfg:FindFirstChild("Mode")
+            local score = ((m and m.Value == map) and 2 or 0) + ((md and md.Value == mode) and 1 or 0)
+            if not best or score > bestScore then best, bestScore = p, score end
+        end
+    end
+    return best
+end
+
+function PlatformUtil.claim(plat)
+    local hrp = getHRP()
+    local hitboxes = plat:FindFirstChild("Hitboxes")
+    local hb = hitboxes and hitboxes:FindFirstChildWhichIsA("BasePart")
+    local stand = plat:FindFirstChild("Teleport")
+    if not (hrp and hb) then return nil end
+    PlatformUtil.claimed = nil
+    gateBusy = true
+    local back = hrp.CFrame
+    hrp.CFrame = hb.CFrame
+    local t0 = os.clock()
+    while not PlatformUtil.claimed and os.clock() - t0 < 3 do task.wait(0.05) end
+    hrp = getHRP()
+    if hrp then
+        hrp.CFrame = stand and (stand.CFrame + Vector3.new(0, 3, 0)) or back
+        hrp.AssemblyLinearVelocity = Vector3.zero
+    end
+    gateBusy = false
+    return PlatformUtil.claimed
+end
+
+task.spawn(function()
+    local lastCreate, createdUntil = 0, 0
+    while alive do
+        if not state.LobbyCreate then
+            status.lobby = "Off"
+        elseif not inLobby() then
+            status.lobby = "In match"
+        elseif os.clock() < createdUntil then
+            status.lobby = "Match starting..."
+        elseif os.clock() - lastCreate >= CREATE_COOLDOWN and Interact then
+            lastCreate = os.clock()
+            local mode = LobbyUtil.mode()
+            local item, cost = LobbyUtil.cost(state.LMap, state.LDiff)
+            local have = item and LobbyUtil.amount(item) or 0
+            if item and have < cost then
+                status.lobby = ("Need %d %s for %s (you have %d)"):format(cost, item, state.LMap, have)
+            else
+                local plat = PlatformUtil.pick(state.LMap, mode)
+                if not plat then
+                    status.lobby = "No free platform"
+                elseif not PlatformUtil.claim(plat) then
+                    status.lobby = "Platform didn't respond, retrying"
+                else
+                    local cfg = {
+                        IsTaken = true,
+                        Difficulty = state.LDiff,
+                        Map = state.LMap,
+                        MaxPlayers = math.min(state.LMax, (mode == "World Boss") and 8 or 6),
+                        Mode = mode,
+                        FriendsOnly = state.LFriends,
+                    }
+                    pcall(Interact.FireServer, Interact, "CreateMatch", PlatformUtil.claimed, cfg)
+                    pcall(function() LP.PlayerGui.HUD.Tabs.MatchPanel.Visible = false end)
+                    createdUntil = os.clock() + CREATE_WAIT
+                    status.lobby = ("Created %s / %s / %s"):format(state.LMap, mode, state.LDiff)
+                end
+            end
+        else
+            status.lobby = "Waiting in lobby"
+        end
+        task.wait(LOBBY_RECHECK)
+    end
+end)
+
+-- auto roll
+task.spawn(function()
+    local fails = 0
+    while alive do
+        if state.Roll and FuncInteract then
+            RollUtil.stopped = false
+            local slotType = state.RollSlot
+            local key, info = RollUtil.resolveSlot(slotType)
+            local want = rarityRank(state.RollStop)
+
+            if not key then
+                RollUtil.stop("No " .. slotType:lower() .. " slot found")
+            elseif info.Locked then
+                RollUtil.stop(key .. " is locked. Unlock it in game or pick another slot")
+            else
+                local have = RollUtil.rarityOfName(slotType, info.Name)
+                local haveRank = have and rarityRank(have)
+                if haveRank and want and haveRank >= want then
+                    RollUtil.stop(("%s already has %s (%s)"):format(key, tostring(info.Name), have))
+                else
+                    local remoteName = (slotType == "Gadget") and "RollGadget" or "RollAbility"
+                    local ok, a, b = pcall(FuncInteract.InvokeServer, FuncInteract, remoteName, key, state.RollView)
+                    if ok and a == "NoSpins" then
+                        RollUtil.stop(state.RollView == "Lucky" and "Out of lucky spins" or "Not enough spins or coins")
+                    elseif ok and type(a) == "string" then
+                        fails = 0
+                        rollCount += 1
+                        local rarity = (type(b) == "string" and b) or RollUtil.rarityOfName(slotType, a)
+                        status.roll = ("%s rolls: %d | last: %s (%s)"):format(key, rollCount, a, tostring(rarity or "?"))
+                        local got = rarity and rarityRank(rarity)
+                        if got and want and got >= want then
+                            RollUtil.stop(("Hit %s: %s on %s"):format(rarity, a, key))
+                        end
+                    else
+                        fails += 1
+                        status.roll = ("Roll failed (%d/5)"):format(fails)
+                        if fails >= 5 then
+                            RollUtil.stop("Server refused the roll 5 times (locked slot or no coins?)")
+                        else
+                            task.wait(0.5)
+                        end
+                    end
+                end
+            end
+            task.wait(ROLL_DELAY)
+        else
+            fails = 0
+            rollCount = 0
+            if not RollUtil.stopped then
+                status.roll = FuncInteract and "Off" or "Roll remote not found"
+            end
+            task.wait(0.5)
+        end
+    end
+end)
+
+----------------------------------------------------------------------
+-- disconnect recovery
+----------------------------------------------------------------------
+local recovering = false
+table.insert(conns, GuiService.ErrorMessageChanged:Connect(function(msg)
+    if not state.Recover or not msg or msg == "" or recovering then return end
+    recovering = true
+    status.recover = "Disconnected, rejoining in " .. RECONNECT_DELAY .. "s"
+    task.delay(RECONNECT_DELAY, function()
+        if not alive then return end
+        pcall(function()
+            local src = loaderSource()
+            if src and queue_on_teleport then queue_on_teleport(src) end
+            TeleportService:Teleport(game.PlaceId, LP)
+        end)
+    end)
+end))
+
+----------------------------------------------------------------------
+-- performance mode / render off
+----------------------------------------------------------------------
+local perf = { on = false, saved = {}, post = {}, quality = nil, shadows = nil, conn = nil }
+
+local function perfDisable(inst)
+    if inst:IsA("ParticleEmitter") or inst:IsA("Trail") or inst:IsA("Beam")
+        or inst:IsA("Smoke") or inst:IsA("Fire") or inst:IsA("Sparkles") then
+        if perf.saved[inst] == nil then perf.saved[inst] = inst.Enabled end
+        pcall(function() inst.Enabled = false end)
+    end
+end
+
+local function setPerf(on)
+    if on == perf.on then return end
+    perf.on = on
+    if on then
+        perf.saved, perf.post = {}, {}
+        pcall(function()
+            perf.quality = settings().Rendering.QualityLevel
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        perf.shadows = Lighting.GlobalShadows
+        Lighting.GlobalShadows = false
+        for _, e in ipairs(Lighting:GetChildren()) do
+            if e:IsA("PostEffect") then
+                perf.post[e] = e.Enabled
+                e.Enabled = false
+            end
+        end
+        pcall(function()
+            for _, d in ipairs(workspace:GetDescendants()) do perfDisable(d) end
+        end)
+        perf.conn = workspace.DescendantAdded:Connect(perfDisable)
+    else
+        if perf.conn then perf.conn:Disconnect() perf.conn = nil end
+        for inst, was in pairs(perf.saved) do
+            if inst.Parent then pcall(function() inst.Enabled = was end) end
+        end
+        for e, was in pairs(perf.post) do
+            if e.Parent then pcall(function() e.Enabled = was end) end
+        end
+        if perf.shadows ~= nil then Lighting.GlobalShadows = perf.shadows end
+        if perf.quality then
+            pcall(function() settings().Rendering.QualityLevel = perf.quality end)
+        end
+        perf.saved, perf.post = {}, {}
+    end
+end
+
+local function setRenderOff(off)
+    pcall(function() RunService:Set3dRenderingEnabled(not off) end)
+end
+
+----------------------------------------------------------------------
+-- GUI (touch friendly: big tap targets, fits the screen, floating AA button)
+----------------------------------------------------------------------
+local function buildGui()
+local W, H = 360, 450
+local PAD = 10
+local HEADER_H = 44
+local ROW_H = 38
+local ACCENT = Color3.fromRGB(124, 96, 255)
+local GREEN = Color3.fromRGB(70, 200, 130)
+local BG = Color3.fromRGB(20, 20, 28)
+local ROW = Color3.fromRGB(33, 33, 46)
+local LISTBG = Color3.fromRGB(26, 26, 38)
+local OFF = Color3.fromRGB(66, 66, 86)
+local TEXT = Color3.fromRGB(240, 240, 248)
+local DIM = Color3.fromRGB(150, 150, 172)
+local MIN_SCALE, MAX_SCALE = 0.45, 2
+
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+local function new(class, props, parent)
+    local inst = Instance.new(class)
+    for k, v in pairs(props) do inst[k] = v end
+    inst.Parent = parent
+    return inst
+end
+
+local function corner(inst, r)
+    new("UICorner", { CornerRadius = UDim.new(0, r or 8) }, inst)
+end
+
+local function label(parent, text, size, color, align, font)
+    return new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextXAlignment = align or Enum.TextXAlignment.Left,
+        Font = font or Enum.Font.Gotham,
+        TextSize = size or 12,
+        TextColor3 = color or DIM,
+        TextWrapped = true,
+        AutomaticSize = Enum.AutomaticSize.Y,
+    }, parent)
+end
+
+local function nextOrder(page)
+    return #page:GetChildren()
+end
+
+local gui = new("ScreenGui", {
+    Name = "AAFarmGui",
+    ResetOnSpawn = false,
+    IgnoreGuiInset = true,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+})
+local okParent = pcall(function()
+    gui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+end)
+if not okParent then
+    gui.Parent = LP:WaitForChild("PlayerGui")
+end
+
+-- fit the window to the screen (phones are small)
+local cam = workspace.CurrentCamera
+local vs = cam and cam.ViewportSize or Vector2.new(1280, 720)
+local fit = math.min(vs.X * 0.94 / W, vs.Y * 0.94 / H)
+local startScale = math.clamp(math.min(state.UIScale, fit), MIN_SCALE, MAX_SCALE)
+
+local frame = new("Frame", {
+    Size = UDim2.fromOffset(W, H),
+    Position = isMobile
+        and UDim2.fromOffset(math.max(0, (vs.X - W * startScale) / 2), math.max(0, (vs.Y - H * startScale) / 2))
+        or UDim2.new(0, 20, 0.15, 0),
+    BackgroundColor3 = BG,
+    BorderSizePixel = 0,
+    ClipsDescendants = true,
+}, gui)
+corner(frame, 12)
+new("UIStroke", { Color = Color3.fromRGB(48, 48, 66), Thickness = 1 }, frame)
+
+local uiScale = new("UIScale", { Scale = startScale }, frame)
+
+-- pause Auto M1 while the mouse is over the hub (PC only; on touch the last tap would pause it forever)
+if not isMobile then
+    table.insert(conns, RunService.Heartbeat:Connect(function()
+        if not frame.Visible then return end
+        local m = UserInputService:GetMouseLocation()
+        local p, s = frame.AbsolutePosition, frame.AbsoluteSize
+        if m.X >= p.X - 8 and m.X <= p.X + s.X + 8 and m.Y >= p.Y - 8 and m.Y <= p.Y + s.Y + 8 then
+            hoverUntil = os.clock() + 0.35
+        end
+    end))
+end
+
+----------------------------------------------------------------------
+-- header
+----------------------------------------------------------------------
+local header = new("Frame", {
+    Size = UDim2.new(1, 0, 0, HEADER_H),
+    BackgroundTransparency = 1,
+}, frame)
+new("TextLabel", {
+    Position = UDim2.fromOffset(PAD + 2, 0),
+    Size = UDim2.new(1, -110, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "Anime Apocalypse",
+    Font = Enum.Font.GothamBold,
+    TextSize = 16,
+    TextColor3 = TEXT,
+    TextXAlignment = Enum.TextXAlignment.Left,
+}, header)
+
+local function headerButton(text, xOffset, color)
+    local b = new("TextButton", {
+        Size = UDim2.fromOffset(32, 32),
+        Position = UDim2.new(1, xOffset, 0, 6),
+        BackgroundColor3 = color,
+        Text = text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextColor3 = TEXT,
+        AutoButtonColor = true,
+    }, header)
+    corner(b, 8)
+    return b
+end
+local minBtn = headerButton("-", -78, ROW)
+local closeBtn = headerButton("X", -40, Color3.fromRGB(176, 58, 70))
+
+----------------------------------------------------------------------
+-- body: tabs + pages + footer
+----------------------------------------------------------------------
+local body = new("Frame", {
+    Position = UDim2.fromOffset(0, HEADER_H),
+    Size = UDim2.new(1, 0, 1, -HEADER_H),
+    BackgroundTransparency = 1,
+}, frame)
+
+local TAB_NAMES = { "Main", "Auto", "Lobby", "Roll", "Misc", "Stats" }
+local TAB_H = 32
+local tabBar = new("Frame", {
+    Position = UDim2.fromOffset(PAD, 0),
+    Size = UDim2.new(1, -PAD * 2, 0, TAB_H),
+    BackgroundColor3 = ROW,
+}, body)
+corner(tabBar, 8)
+
+local pages = {}
+local tabButtons = {}
+local openDropdown = nil
+local toggleViews = {}
+
+uiHooks.refreshToggle = function(key)
+    local f = toggleViews[key]
+    if f then f() end
+end
+
+local function showTab(name)
+    if openDropdown then openDropdown() end
+    for n, page in pairs(pages) do
+        page.Visible = (n == name)
+        tabButtons[n].BackgroundColor3 = (n == name) and ACCENT or ROW
+        tabButtons[n].TextColor3 = (n == name) and TEXT or DIM
+    end
+end
+
+local PAGE_TOP = TAB_H + 6
+local FOOTER_H = 42
+for i, name in ipairs(TAB_NAMES) do
+    local b = new("TextButton", {
+        Size = UDim2.new(1 / #TAB_NAMES, -3, 1, -6),
+        Position = UDim2.new((i - 1) / #TAB_NAMES, (i == 1) and 3 or 2, 0, 3),
+        BackgroundColor3 = ROW,
+        Text = name,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        TextColor3 = DIM,
+        AutoButtonColor = false,
+    }, tabBar)
+    corner(b, 6)
+    tabButtons[name] = b
+
+    local page = new("ScrollingFrame", {
+        Position = UDim2.fromOffset(PAD, PAGE_TOP),
+        Size = UDim2.new(1, -PAD * 2, 1, -(PAGE_TOP + FOOTER_H)),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 6,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        Visible = false,
+    }, body)
+    new("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, page)
+    new("UIPadding", { PaddingBottom = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, page)
+    pages[name] = page
+    b.MouseButton1Click:Connect(function() showTab(name) end)
+end
+
+-- footer: status lines that show on every tab
+local footer = new("Frame", {
+    Position = UDim2.new(0, PAD, 1, -FOOTER_H),
+    Size = UDim2.new(1, -PAD * 2, 0, FOOTER_H),
+    BackgroundTransparency = 1,
+}, body)
+new("Frame", {
+    Size = UDim2.new(1, 0, 0, 1),
+    BackgroundColor3 = ROW,
+    BorderSizePixel = 0,
+}, footer)
+local farmLabel = new("TextLabel", {
+    Position = UDim2.fromOffset(0, 4), Size = UDim2.new(1, -24, 0, 16), BackgroundTransparency = 1,
+    Text = "", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = DIM, TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+}, footer)
+local gateLabel = new("TextLabel", {
+    Position = UDim2.fromOffset(0, 21), Size = UDim2.new(1, -24, 0, 16), BackgroundTransparency = 1,
+    Text = "", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = DIM, TextXAlignment = Enum.TextXAlignment.Left,
+    TextTruncate = Enum.TextTruncate.AtEnd,
+}, footer)
+
+-- resize grip (bottom-right corner)
+local grip = new("TextButton", {
+    Size = UDim2.fromOffset(28, 28),
+    Position = UDim2.new(1, -28, 1, -28),
+    BackgroundTransparency = 1,
+    Text = "â—¢",
+    Font = Enum.Font.GothamBold,
+    TextSize = 16,
+    TextColor3 = DIM,
+    AutoButtonColor = false,
+    ZIndex = 50,
+}, frame)
+local resizing, resizeStartX, resizeStartScale = false, 0, 1
+grip.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        resizing = true
+        resizeStartX = i.Position.X
+        resizeStartScale = uiScale.Scale
+    end
+end)
+table.insert(conns, UserInputService.InputChanged:Connect(function(i)
+    if resizing and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        local dx = i.Position.X - resizeStartX
+        uiScale.Scale = math.clamp(resizeStartScale + dx / W, MIN_SCALE, MAX_SCALE)
+    end
+end))
+table.insert(conns, UserInputService.InputEnded:Connect(function(i)
+    if resizing and (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then
+        resizing = false
+        state.UIScale = uiScale.Scale
+        saveSettings()
+    end
+end))
+
+----------------------------------------------------------------------
+-- row builders
+----------------------------------------------------------------------
+local function sectionTitle(page, text)
+    local l = label(page, text, 11, DIM, nil, Enum.Font.GothamMedium)
+    l.LayoutOrder = nextOrder(page)
+    l.Size = UDim2.new(1, 0, 0, 16)
+    l.AutomaticSize = Enum.AutomaticSize.None
+    return l
+end
+
+-- a live status line
+local function note(page, text)
+    local l = label(page, text, 11, DIM)
+    l.LayoutOrder = nextOrder(page)
+    return l
+end
+
+local function makeToggle(page, text, key, onChange)
+    local row = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, ROW_H),
+        BackgroundColor3 = ROW,
+        AutoButtonColor = false,
+        Text = "",
+        LayoutOrder = nextOrder(page),
+    }, page)
+    corner(row, 8)
+    new("TextLabel", {
+        Position = UDim2.fromOffset(12, 0),
+        Size = UDim2.new(1, -74, 1, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextColor3 = TEXT,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    }, row)
+
+    local pill = new("Frame", {
+        Size = UDim2.fromOffset(42, 22),
+        Position = UDim2.new(1, -52, 0.5, -11),
+        BackgroundColor3 = state[key] and ACCENT or OFF,
+    }, row)
+    corner(pill, 11)
+    local knob = new("Frame", {
+        Size = UDim2.fromOffset(18, 18),
+        Position = state[key] and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2),
+        BackgroundColor3 = TEXT,
+    }, pill)
+    corner(knob, 9)
+
+    local function paint()
+        pill.BackgroundColor3 = state[key] and ACCENT or OFF
+        knob.Position = state[key] and UDim2.fromOffset(22, 2) or UDim2.fromOffset(2, 2)
+    end
+    toggleViews[key] = paint
+
+    row.MouseButton1Click:Connect(function()
+        state[key] = not state[key]
+        paint()
+        saveSettings()
+        if onChange then onChange(state[key]) end
+    end)
+end
+
+local function segmented(page, options, key, onChange)
+    local wrap = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 34),
+        BackgroundTransparency = 1,
+        LayoutOrder = nextOrder(page),
+    }, page)
+    local btns = {}
+    local n = #options
+    local function refresh()
+        for _, o in ipairs(options) do
+            local on = (state[key] == o[1])
+            btns[o[1]].BackgroundColor3 = on and ACCENT or ROW
+            btns[o[1]].TextColor3 = on and TEXT or DIM
+        end
+    end
+    for i, o in ipairs(options) do
+        local b = new("TextButton", {
+            Size = UDim2.new(1 / n, -4, 1, 0),
+            Position = UDim2.new((i - 1) / n, (i - 1) * 2, 0, 0),
+            BackgroundColor3 = ROW,
+            AutoButtonColor = false,
+            Text = o[2],
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = DIM,
+        }, wrap)
+        corner(b, 8)
+        btns[o[1]] = b
+        b.MouseButton1Click:Connect(function()
+            state[key] = o[1]
+            refresh()
+            saveSettings()
+            if onChange then onChange(o[1]) end
+        end)
+    end
+    refresh()
+end
+
+local function dropdown(page, text, getOptions, key, onPick, opts)
+    opts = opts or {}
+    local getValue = opts.get or function() return state[key] end
+    local setValue = opts.set or function(v) state[key] = v end
+    local labelFor = opts.label or tostring
+
+    local holder = new("Frame", {
+        Size = UDim2.new(1, 0, 0, ROW_H),
+        BackgroundTransparency = 1,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        LayoutOrder = nextOrder(page),
+    }, page)
+    new("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, holder)
+
+    local row = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, ROW_H),
+        BackgroundColor3 = ROW,
+        AutoButtonColor = false,
+        Text = "",
+        LayoutOrder = 1,
+    }, holder)
+    corner(row, 8)
+    new("TextLabel", {
+        Position = UDim2.fromOffset(12, 0),
+        Size = UDim2.new(0.34, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextColor3 = DIM,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    }, row)
+    local value = new("TextLabel", {
+        Position = UDim2.new(0.34, 0, 0, 0),
+        Size = UDim2.new(0.66, -30, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = TEXT,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    }, row)
+    local arrow = new("TextLabel", {
+        Position = UDim2.new(1, -24, 0, 0),
+        Size = UDim2.fromOffset(16, ROW_H),
+        BackgroundTransparency = 1,
+        Text = "â–¾",
+        Font = Enum.Font.Gotham,
+        TextSize = 14,
+        TextColor3 = DIM,
+    }, row)
+
+    local list = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = LISTBG,
+        BorderSizePixel = 0,
+        Visible = false,
+        LayoutOrder = 2,
+    }, holder)
+    corner(list, 8)
+    new("UIListLayout", { Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+    new("UIPadding", {
+        PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4),
+        PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4),
+    }, list)
+
+    local function refresh()
+        local v = getValue()
+        value.Text = (v == nil or v == "") and "-" or labelFor(v)
+    end
+
+    local function close()
+        list.Visible = false
+        arrow.Text = "â–¾"
+        if openDropdown == close then openDropdown = nil end
+    end
+
+    local function rebuild()
+        for _, c in ipairs(list:GetChildren()) do
+            if c:IsA("TextButton") then c:Destroy() end
+        end
+        local current = getValue()
+        for i, o in ipairs(getOptions()) do
+            local b = new("TextButton", {
+                Size = UDim2.new(1, 0, 0, 34),
+                BackgroundColor3 = (o == current) and ACCENT or ROW,
+                AutoButtonColor = true,
+                Text = labelFor(o),
+                Font = Enum.Font.GothamMedium,
+                TextSize = 13,
+                TextColor3 = TEXT,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                LayoutOrder = i,
+            }, list)
+            corner(b, 6)
+            b.MouseButton1Click:Connect(function()
+                setValue(o)
+                refresh()
+                saveSettings()
+                if onPick then onPick(o) end
+                close()
+            end)
+        end
+    end
+
+    row.MouseButton1Click:Connect(function()
+        if list.Visible then
+            close()
+            return
+        end
+        if openDropdown then openDropdown() end
+        rebuild()
+        list.Visible = true
+        arrow.Text = "â–´"
+        openDropdown = close
+    end)
+
+    refresh()
+    return { refresh = refresh, close = close }
+end
+
+-- distance slider (1 to 40 studs). page scrolling is paused while dragging so touch drags move the slider
+local function distanceSlider(page)
+    local wrap = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 54),
+        BackgroundColor3 = ROW,
+        LayoutOrder = nextOrder(page),
+    }, page)
+    corner(wrap, 8)
+    new("TextLabel", {
+        Position = UDim2.fromOffset(12, 6),
+        Size = UDim2.new(0.5, 0, 0, 16),
+        BackgroundTransparency = 1,
+        Text = "Distance",
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextColor3 = DIM,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, wrap)
+    local distValue = new("TextLabel", {
+        Position = UDim2.new(0.5, 0, 0, 6),
+        Size = UDim2.new(0.5, -12, 0, 16),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = TEXT,
+        TextXAlignment = Enum.TextXAlignment.Right,
+    }, wrap)
+
+    local hit = new("TextButton", {
+        Position = UDim2.new(0, 12, 0, 24),
+        Size = UDim2.new(1, -24, 0, 26),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+    }, wrap)
+    local track = new("Frame", {
+        Position = UDim2.new(0, 0, 0.5, -3),
+        Size = UDim2.new(1, 0, 0, 6),
+        BackgroundColor3 = BG,
+        BorderSizePixel = 0,
+    }, hit)
+    corner(track, 3)
+    local fill = new("Frame", {
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = ACCENT,
+        BorderSizePixel = 0,
+    }, track)
+    corner(fill, 3)
+    local knob = new("Frame", {
+        Size = UDim2.fromOffset(20, 20),
+        BackgroundColor3 = TEXT,
+    }, hit)
+    corner(knob, 10)
+
+    local function setSlider(rel)
+        rel = math.clamp(rel, 0, 1)
+        state.Dist = math.floor(MIN_D + rel * (MAX_D - MIN_D) + 0.5)
+        local snapped = (state.Dist - MIN_D) / (MAX_D - MIN_D)
+        fill.Size = UDim2.new(snapped, 0, 1, 0)
+        knob.Position = UDim2.new(snapped, -10, 0.5, -10)
+        distValue.Text = ("%d studs"):format(state.Dist)
+    end
+    setSlider((state.Dist - MIN_D) / (MAX_D - MIN_D))
+
+    local function relFromX(x)
+        return (x - hit.AbsolutePosition.X) / math.max(hit.AbsoluteSize.X, 1)
+    end
+    local sliding = false
+    hit.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            sliding = true
+            page.ScrollingEnabled = false
+            setSlider(relFromX(i.Position.X))
+        end
+    end)
+    table.insert(conns, UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            if sliding then saveSettings() end
+            sliding = false
+            page.ScrollingEnabled = true
+        end
+    end))
+    table.insert(conns, UserInputService.InputChanged:Connect(function(i)
+        if sliding and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            setSlider(relFromX(i.Position.X))
+        end
+    end))
+end
+
+local function infoRow(page, text)
+    local row = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundTransparency = 1,
+        LayoutOrder = nextOrder(page),
+    }, page)
+    new("TextLabel", {
+        Size = UDim2.new(0.5, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        Font = Enum.Font.Gotham,
+        TextSize = 13,
+        TextColor3 = DIM,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, row)
+    return new("TextLabel", {
+        Position = UDim2.new(0.5, 0, 0, 0),
+        Size = UDim2.new(0.5, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 14,
+        TextColor3 = TEXT,
+        TextXAlignment = Enum.TextXAlignment.Right,
+    }, row)
+end
+
+----------------------------------------------------------------------
+-- MAIN page (farm + combat)
+----------------------------------------------------------------------
+local main = pages.Main
+makeToggle(main, "Autofarm (opens gates)", "Farm")
+makeToggle(main, "Auto M1 Click", "M1")
+sectionTitle(main, "POSITION")
+segmented(main, { { "Above", "Above" }, { "Behind", "Behind" }, { "Below", "Below" } }, "Mode")
+distanceSlider(main)
+
+sectionTitle(main, "COMBAT")
+makeToggle(main, "Auto Skills", "Skills")
+
+local chipRow = new("Frame", {
+    Size = UDim2.new(1, 0, 0, 36),
+    BackgroundTransparency = 1,
+    LayoutOrder = nextOrder(main),
+}, main)
+local chips = {}
+local function refreshChip(letter)
+    local btn = chips[letter]
+    local on = state.Keys[letter]
+    btn.BackgroundColor3 = on and ACCENT or ROW
+    btn.TextColor3 = on and TEXT or DIM
+end
+for i, letter in ipairs(KEYS) do
+    local b = new("TextButton", {
+        Size = UDim2.new(0.25, -6, 1, 0),
+        Position = UDim2.new((i - 1) * 0.25, (i - 1) * 2, 0, 0),
+        BackgroundColor3 = ROW,
+        AutoButtonColor = false,
+        Text = letter,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = DIM,
+    }, chipRow)
+    corner(b, 8)
+    chips[letter] = b
+    refreshChip(letter)
+    b.MouseButton1Click:Connect(function()
+        state.Keys[letter] = not state.Keys[letter]
+        refreshChip(letter)
+        saveSettings()
+    end)
+end
+
+makeToggle(main, "Auto Gadget", "Gadget")
+
+local gadgetCard = new("Frame", {
+    Size = UDim2.new(1, 0, 0, 48),
+    BackgroundColor3 = ROW,
+    LayoutOrder = nextOrder(main),
+}, main)
+corner(gadgetCard, 8)
+local gName = new("TextLabel", {
+    Position = UDim2.fromOffset(12, 6), Size = UDim2.new(0.6, 0, 0, 16), BackgroundTransparency = 1,
+    Text = "-", Font = Enum.Font.GothamMedium, TextSize = 13, TextColor3 = TEXT,
+    TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+}, gadgetCard)
+local gValue = new("TextLabel", {
+    Position = UDim2.new(0.6, 0, 0, 6), Size = UDim2.new(0.4, -12, 0, 16), BackgroundTransparency = 1,
+    Text = "", Font = Enum.Font.Gotham, TextSize = 12, TextColor3 = DIM,
+    TextXAlignment = Enum.TextXAlignment.Right,
+}, gadgetCard)
+local gTrack = new("Frame", {
+    Position = UDim2.fromOffset(12, 32), Size = UDim2.new(1, -24, 0, 6), BackgroundColor3 = BG, BorderSizePixel = 0,
+}, gadgetCard)
+corner(gTrack, 3)
+local gFill = new("Frame", {
+    Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = ACCENT, BorderSizePixel = 0,
+}, gTrack)
+corner(gFill, 3)
+
+local combatStatus = note(main, "")
+
+----------------------------------------------------------------------
+-- AUTO page
+----------------------------------------------------------------------
+local auto = pages.Auto
+makeToggle(auto, "Auto Retry", "Retry")
+local retryStatus = note(auto, "")
+makeToggle(auto, "Auto Start (Raid / Infinite)", "Start", function(on)
+    if on and uiHooks.startNow then uiHooks.startNow() end
+end)
+local startStatus = note(auto, "")
+makeToggle(auto, "Auto Escape", "Escape")
+local escapeStatus = note(auto, "")
+makeToggle(auto, "Auto Skip Wave", "SkipWave")
+makeToggle(auto, "Auto Skip Cutscenes", "SkipCutscene", function(on)
+    if on and uiHooks.cutsceneNow then uiHooks.cutsceneNow() end
+end)
+makeToggle(auto, "Auto Pickup", "Pickup")
+makeToggle(auto, "Auto Pick Contract", "Contract")
+dropdown(auto, "Contract", function() return LobbyUtil.contractNames() end, "ContractPick")
+local contractStatus = note(auto, "")
+makeToggle(auto, "Auto Choose Side", "Side")
+dropdown(auto, "Side", function() return { "Quincy", "Soul Reaper" } end, "SidePick")
+local sideStatus = note(auto, "")
+makeToggle(auto, "Auto Secure Sites", "Sites")
+local sitesStatus = note(auto, "")
+makeToggle(auto, "Auto Destroy Chokeholds", "Chokeholds")
+local chokeStatus = note(auto, "")
+
+----------------------------------------------------------------------
+-- LOBBY page
+----------------------------------------------------------------------
+local lobby = pages.Lobby
+makeToggle(lobby, "Auto Create Match", "LobbyCreate")
+sectionTitle(lobby, "MATCH SETUP")
+
+local modeDD, mapDD, diffDD, maxDD
+local function refreshLobby()
+    fixLobbyChoice()
+    if state.LMax > ((LobbyUtil.mode() == "World Boss") and 8 or 6) then
+        state.LMax = (LobbyUtil.mode() == "World Boss") and 8 or 6
+    end
+    if modeDD then modeDD.refresh() end
+    if mapDD then mapDD.refresh() end
+    if diffDD then diffDD.refresh() end
+    if maxDD then maxDD.refresh() end
+end
+
+modeDD = dropdown(lobby, "Mode", function() return MODES end, "LMode", refreshLobby, {
+    get = function() return LobbyUtil.mode() end,
+})
+mapDD = dropdown(lobby, "Map", function() return mapsFor(state.LMode) end, "LMap", refreshLobby)
+diffDD = dropdown(lobby, "Difficulty", function() return difficultiesFor(LobbyUtil.mode()) end, "LDiff", refreshLobby)
+maxDD = dropdown(lobby, "Max players", function()
+    local top = (LobbyUtil.mode() == "World Boss") and 8 or 6
+    local list = {}
+    for i = 1, top do list[i] = i end
+    return list
+end, "LMax")
+makeToggle(lobby, "Friends only", "LFriends")
+local lobbyStatus = note(lobby, "")
+
+----------------------------------------------------------------------
+-- ROLL page (its own tab)
+----------------------------------------------------------------------
+local rollPage = pages.Roll
+makeToggle(rollPage, "Auto Roll", "Roll")
+sectionTitle(rollPage, "ROLL WHAT")
+
+local slotDD, stopDD
+segmented(rollPage, { { "Ability", "Ability" }, { "Gadget", "Gadget" } }, "RollSlot", function()
+    RollUtil.fixChoice()
+    if slotDD then slotDD.refresh() end
+    if stopDD then stopDD.refresh() end
+end)
+
+slotDD = dropdown(rollPage, "Slot", function() return RollUtil.slotKeys(state.RollSlot) end, nil, nil, {
+    label = function(k) return RollUtil.slotLabel(state.RollSlot, k) end,
+    get = function() return (RollUtil.resolveSlot(state.RollSlot)) end,
+    set = function(v)
+        if state.RollSlot == "Gadget" then state.RollGadgetSlot = v else state.RollAbilitySlot = v end
+    end,
+})
+
+sectionTitle(rollPage, "ROLL VIEW")
+segmented(rollPage, { { "Normal", "Normal" }, { "Lucky", "Lucky" } }, "RollView")
+stopDD = dropdown(rollPage, "Stop at", function() return RollUtil.rarityList(state.RollSlot) end, "RollStop")
+local spinsLabel = note(rollPage, "")
+local rollStatus = note(rollPage, "")
+
+----------------------------------------------------------------------
+-- MISC page
+----------------------------------------------------------------------
+local misc = pages.Misc
+sectionTitle(misc, "FARMING")
+makeToggle(misc, "Survival mode", "Survival")
+makeToggle(misc, "Wait for kills before gate", "GateWait")
+makeToggle(misc, "Performance mode", "Perf", setPerf)
+makeToggle(misc, "Render off (black screen)", "NoRender", setRenderOff)
+sectionTitle(misc, "CONNECTION")
+makeToggle(misc, "Auto re-execute", "Persist")
+makeToggle(misc, "Disconnect recovery", "Recover")
+
+----------------------------------------------------------------------
+-- STATS page
+----------------------------------------------------------------------
+local statsPage = pages.Stats
+local statRows = {}
+statRows.Runtime = infoRow(statsPage, "Runtime")
+statRows.Kills = infoRow(statsPage, "Kills")
+statRows.Matches = infoRow(statsPage, "Matches played")
+statRows.Gates = infoRow(statsPage, "Gates opened")
+statRows.Drops = infoRow(statsPage, "Drops picked up")
+
+local resetBtn = new("TextButton", {
+    Size = UDim2.new(1, 0, 0, ROW_H),
+    BackgroundColor3 = ROW,
+    AutoButtonColor = true,
+    Text = "Reset stats",
+    Font = Enum.Font.GothamMedium,
+    TextSize = 13,
+    TextColor3 = TEXT,
+    LayoutOrder = nextOrder(statsPage),
+}, statsPage)
+corner(resetBtn, 8)
+resetBtn.MouseButton1Click:Connect(function()
+    for k in pairs(stats) do stats[k] = 0 end
+    saveSettings()
+end)
+
+----------------------------------------------------------------------
+-- window behavior
+----------------------------------------------------------------------
+showTab("Main")
+
+if state.Perf then setPerf(true) end
+if state.NoRender then setRenderOff(true) end
+
+local minimized = false
+minBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    body.Visible = not minimized
+    frame.Size = UDim2.fromOffset(W, minimized and HEADER_H or H)
+    minBtn.Text = minimized and "+" or "-"
+    if minimized and openDropdown then openDropdown() end
+end)
+
+local dragging, dragStart, startPos
+header.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = i.Position
+        startPos = frame.Position
+        i.Changed:Connect(function()
+            if i.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+table.insert(conns, UserInputService.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+        local d = i.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+    end
+end))
+
+table.insert(conns, UserInputService.InputBegan:Connect(function(i, gp)
+    if not gp and i.KeyCode == Enum.KeyCode.RightControl then
+        frame.Visible = not frame.Visible
+        if not frame.Visible and openDropdown then openDropdown() end
+    end
+end))
+
+-- floating lightning bolt button: tap to show / hide the hub (drag it to move it)
+do
+    local fab = new("TextButton", {
+        Size = UDim2.fromOffset(46, 46),
+        Position = UDim2.new(1, -60, 0.4, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        Text = "âš¡",
+        Font = Enum.Font.GothamBold,
+        TextSize = 24,
+        TextColor3 = Color3.fromRGB(255, 214, 51),
+        AutoButtonColor = false,
+        ZIndex = 100,
+    }, gui)
+    corner(fab, 23)
+    new("UIStroke", { Color = ACCENT, Thickness = 1.5 }, fab)
+
+    local fdrag, fmoved, fstart, fpos = false, false, nil, nil
+    fab.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            fdrag, fmoved = true, false
+            fstart, fpos = i.Position, fab.Position
+            i.Changed:Connect(function()
+                if i.UserInputState == Enum.UserInputState.End then fdrag = false end
+            end)
+        end
+    end)
+    table.insert(conns, UserInputService.InputChanged:Connect(function(i)
+        if fdrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local d = i.Position - fstart
+            if d.Magnitude > 8 then fmoved = true end
+            if fmoved then
+                fab.Position = UDim2.new(fpos.X.Scale, fpos.X.Offset + d.X, fpos.Y.Scale, fpos.Y.Offset + d.Y)
+            end
+        end
+    end))
+    fab.MouseButton1Click:Connect(function()
+        if fmoved then fmoved = false return end
+        frame.Visible = not frame.Visible
+        if not frame.Visible and openDropdown then openDropdown() end
+    end)
+end
+
+local function fmtTime(s)
+    s = math.floor(s)
+    return ("%dh %02dm %02ds"):format(s // 3600, (s % 3600) // 60, s % 60)
+end
+
+-- live updates
+task.spawn(function()
+    local tickCount = 0
+    while alive do
+        farmLabel.Text = "Farm: " .. status.farm
+        gateLabel.Text = "Gate: " .. status.gate
+        combatStatus.Text = status.combat
+        retryStatus.Text = "Retry: " .. status.retry
+        startStatus.Text = "Start: " .. status.start
+        escapeStatus.Text = "Escape: " .. status.escape
+        contractStatus.Text = "Contract: " .. status.contract
+        sideStatus.Text = "Side: " .. status.side
+        sitesStatus.Text = "Sites: " .. status.sites
+        chokeStatus.Text = "Chokeholds: " .. status.choke
+        lobbyStatus.Text = "Create: " .. status.lobby
+        rollStatus.Text = "Roll: " .. status.roll
+
+        statRows.Runtime.Text = fmtTime(stats.Runtime)
+        statRows.Kills.Text = tostring(stats.Kills)
+        statRows.Matches.Text = tostring(stats.Matches)
+        statRows.Gates.Text = tostring(stats.Gates)
+        statRows.Drops.Text = tostring(stats.Drops)
+
+        if tickCount % 2 == 0 then
+            local data = LP:FindFirstChild("Data")
+            local pre = (state.RollSlot == "Gadget") and "Gadget" or "Ability"
+            local nv = data and data:FindFirstChild("Normal" .. pre .. "Spins")
+            local lv = data and data:FindFirstChild("Lucky" .. pre .. "Spins")
+            local cv = data and data:FindFirstChild("Coins")
+            spinsLabel.Text = ("Spins - Normal: %s | Lucky: %s | Coins: %s"):format(
+                nv and tostring(nv.Value) or "?", lv and tostring(lv.Value) or "?", cv and tostring(cv.Value) or "?")
+            slotDD.refresh()
+        end
+        tickCount += 1
+
+        local now = os.clock()
+        for _, letter in ipairs(KEYS) do
+            local left = (cdEnd[letter] or 0) - now
+            chips[letter].Text = (left > 0.05) and ("%s %ds"):format(letter, math.ceil(left)) or letter
+        end
+
+        local _, gname = findSlot("GadgetSlots", "Equipped")
+        local meter = LP:FindFirstChild("GadgetMeter")
+        local req = gname and gadgetRequirement(gname)
+        if gname and meter and req then
+            local value = math.min(meter.Value, req)
+            gName.Text = gname
+            gValue.Text = ("%d / %d"):format(math.floor(value), req)
+            gFill.Size = UDim2.new(math.clamp(value / req, 0, 1), 0, 1, 0)
+            gFill.BackgroundColor3 = (meter.Value >= req) and GREEN or ACCENT
+        else
+            gName.Text = gname or "No gadget equipped"
+            gValue.Text = ""
+            gFill.Size = UDim2.new(0, 0, 1, 0)
+        end
+
+        task.wait(0.25)
+    end
+end)
+
+----------------------------------------------------------------------
+-- cleanup
+----------------------------------------------------------------------
+local function cleanup()
+    alive = false
+    escapeActive = false
+    siteLock = nil
+    chokeTarget = nil
+    ChokeUtil.mode = false
+    for _, c in ipairs(conns) do pcall(function() c:Disconnect() end) end
+    setPerf(false)
+    setRenderOff(false)
+    pcall(function() gui:Destroy() end)
+    env.__AA_CLEANUP = nil
+end
+env.__AA_CLEANUP = cleanup
+
+closeBtn.MouseButton1Click:Connect(function()
+    closing = true
+    local snap = {}
+    for k, v in pairs(state) do snap[k] = v end
+    for _, k in ipairs(AUTOMATION) do snap[k] = false end
+    writeSettings(snap)
+    cleanup()
+end)
+end
+
+buildGui()
