@@ -1,0 +1,35 @@
+local PlaceId = game.PlaceId
+
+-- Search For Needles (5 Place ID)
+if PlaceId == 77108422251420
+    or PlaceId == 82626725163709
+    or PlaceId == 83445806734780
+    or PlaceId == 108628039999641
+    or PlaceId == 382626725163709 then
+    loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Newgui_needle"))()
+
+-- Drill to Earth Core (2 Place ID)
+elseif PlaceId == 101906032112547
+    or PlaceId == 74507545904779 then
+    loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Drill-the-core"))()
+
+-- Tongue Escape
+elseif PlaceId == 122245938604556 then
+    loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Tongue-escape"))()
+
+-- Build and Kill Zombie
+elseif PlaceId == 105011592530400 then
+    loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Build-kill"))()
+
+-- Peel Potato
+elseif PlaceId == 116701845804918
+    or PlaceId == 116701845804918 then
+    loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Peel_Potato_KIWIN"))()
+
+-- Steal an Egg
+elseif PlaceId == 107778070777162 then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/all-scripthub"))()
+
+else
+    warn("No support: " .. PlaceId)
+end
