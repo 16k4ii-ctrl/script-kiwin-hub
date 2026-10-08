@@ -29,6 +29,7 @@ elseif PlaceId == 116701845804918
 -- Steal an Egg
 elseif PlaceId == 107778070777162 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/all-scripthub"))()
+
 -- anime
 elseif PlaceId == 140409475718339
     or PlaceId == 119114794144012 then
