@@ -1,9 +1,13 @@
 if getgenv().KiwinHub and getgenv().KiwinHub.Unload then
     pcall(getgenv().KiwinHub.Unload)
 end
+if getgenv().KiciaRebuild and getgenv().KiciaRebuild.Unload then
+    pcall(getgenv().KiciaRebuild.Unload)
+end
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local K: { [string]: any } = { connections = {}, cleanups = {}, destroyed = false }
+getgenv().KiciaRebuild = K
 getgenv().KiwinHub = K
 
 local Players = game:GetService("Players")
@@ -42,6 +46,8 @@ local function hudParent()
     return game:GetService("CoreGui")
 end
 K.hudParent = hudParent
+K.LithiumLogo = "rbxassetid://115528029499362"
+K.KiwinLogo = K.LithiumLogo
 
 function K.track(c) K.connections[#K.connections + 1] = c; return c end
 function K.onUnload(f) K.cleanups[#K.cleanups + 1] = f end
@@ -1854,7 +1860,7 @@ return u.c
 end
 end
 do -- v
-local function fn35()local I,W,N,P= tbl17 .u(),{},table.freeze({IsCompact=false,Rail=table.freeze({Width=100,HeaderHeight=85,TabsTop=102,TabSize=66,TabGap=0,TabIconSize=26,LogoSize=Vector2.new(48,37),ShowLabels=true}),Page=table.freeze({HasTitleBlock=true,OuterInset=18,HorizontalInset=17,HeaderHeight=85,TabsHeight=84,BottomInset=17,TitleTextSize=18,DescriptionTextSize=13,TabMinWidth=50,TabHeight=50,TabIconSize=24,TabTextSize=16,TabGap=14,TabPaddingLeft=13,TabPaddingRight=16,SearchCollapsedWidth=90,SearchExpandedWidth=260,SearchHeight=33,SearchRightInset=14}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=17,MinColumnWidth=220}),Section=table.freeze({Gap=17,TitleGap=16,InnerPadding=12,ElementGap=12,GroupGap=12,TitleTextSize=16,MultiHeaderHeight=45,MultiHeaderGap=12,MultiHeaderPadding=12,MultiPaneTop=57,MultiTabTextSize=16}),Row=table.freeze({Height=24,TextSize=16,ControlVerticalInset=0,ControlHeight=22,AttachmentGap=11,ListRowHeight=26}),Button=table.freeze({RowHeight=24,VisualHeight=22,Gap=13})}),table.freeze({IsCompact=true,Rail=table.freeze({Width=52,HeaderHeight=48,TabsTop=52,TabSize=44,TabGap=0,TabIconSize=20,LogoSize=Vector2.new(24,19),ShowLabels=false}),Page=table.freeze({HasTitleBlock=true,OuterInset=12,HorizontalInset=12,HeaderHeight=44,TabsHeight=40,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=34,TabIconSize=18,TabTextSize=13,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=12,MinColumnWidth=220}),Section=table.freeze({Gap=12,TitleGap=8,InnerPadding=8,ElementGap=8,GroupGap=8,TitleTextSize=15,MultiHeaderHeight=36,MultiHeaderGap=8,MultiHeaderPadding=8,MultiPaneTop=44,MultiTabTextSize=13}),Row=table.freeze({Height=32,TextSize=14,ControlVerticalInset=4,ControlHeight=24,AttachmentGap=8,ListRowHeight=32}),Button=table.freeze({RowHeight=32,VisualHeight=30,Gap=8})});local l=table.freeze({IsCompact=true,Rail=P.Rail,Page=table.freeze({HasTitleBlock=false,OuterInset=12,HorizontalInset=12,HeaderHeight=0,TabsHeight=44,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=36,TabIconSize=18,TabTextSize=14,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=P.Navigation,Grid=table.freeze({Gap=12,MinColumnWidth=330}),Section=P.Section,Row=table.freeze({Height=40,TextSize=15,ControlVerticalInset=6,ControlHeight=28,AttachmentGap=8,ListRowHeight=40}),Button=table.freeze({RowHeight=40,VisualHeight=36,Gap=8})});W.get=function()if not I.IsMobile()then return N;end;if I.IsTablet()then return P;end;return l;end;return W;end
+local function fn35()local I,W,N,P= tbl17 .u(),{},table.freeze({IsCompact=false,Rail=table.freeze({Width=100,HeaderHeight=85,TabsTop=102,TabSize=66,TabGap=4,TabIconSize=26,LogoSize=Vector2.new(48,37),ShowLabels=true}),Page=table.freeze({HasTitleBlock=true,OuterInset=18,HorizontalInset=17,HeaderHeight=85,TabsHeight=84,BottomInset=17,TitleTextSize=18,DescriptionTextSize=13,TabMinWidth=50,TabHeight=50,TabIconSize=24,TabTextSize=16,TabGap=14,TabPaddingLeft=13,TabPaddingRight=16,SearchCollapsedWidth=90,SearchExpandedWidth=260,SearchHeight=33,SearchRightInset=14}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=17,MinColumnWidth=220}),Section=table.freeze({Gap=17,TitleGap=16,InnerPadding=12,ElementGap=12,GroupGap=12,TitleTextSize=16,MultiHeaderHeight=45,MultiHeaderGap=12,MultiHeaderPadding=12,MultiPaneTop=57,MultiTabTextSize=16}),Row=table.freeze({Height=24,TextSize=16,ControlVerticalInset=0,ControlHeight=22,AttachmentGap=11,ListRowHeight=26}),Button=table.freeze({RowHeight=24,VisualHeight=22,Gap=13})}),table.freeze({IsCompact=true,Rail=table.freeze({Width=52,HeaderHeight=48,TabsTop=52,TabSize=44,TabGap=2,TabIconSize=20,LogoSize=Vector2.new(24,19),ShowLabels=false}),Page=table.freeze({HasTitleBlock=true,OuterInset=12,HorizontalInset=12,HeaderHeight=44,TabsHeight=40,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=34,TabIconSize=18,TabTextSize=13,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=12,MinColumnWidth=220}),Section=table.freeze({Gap=12,TitleGap=8,InnerPadding=8,ElementGap=8,GroupGap=8,TitleTextSize=15,MultiHeaderHeight=36,MultiHeaderGap=8,MultiHeaderPadding=8,MultiPaneTop=44,MultiTabTextSize=13}),Row=table.freeze({Height=32,TextSize=14,ControlVerticalInset=4,ControlHeight=24,AttachmentGap=8,ListRowHeight=32}),Button=table.freeze({RowHeight=32,VisualHeight=30,Gap=8})});local l=table.freeze({IsCompact=true,Rail=P.Rail,Page=table.freeze({HasTitleBlock=false,OuterInset=12,HorizontalInset=12,HeaderHeight=0,TabsHeight=44,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=36,TabIconSize=18,TabTextSize=14,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=P.Navigation,Grid=table.freeze({Gap=12,MinColumnWidth=330}),Section=P.Section,Row=table.freeze({Height=40,TextSize=15,ControlVerticalInset=6,ControlHeight=28,AttachmentGap=8,ListRowHeight=40}),Button=table.freeze({RowHeight=40,VisualHeight=36,Gap=8})});W.get=function()if not I.IsMobile()then return N;end;if I.IsTablet()then return P;end;return l;end;return W;end
 
 tbl17.v = function()
 local v115 = tbl17.cache.v
@@ -1958,7 +1964,7 @@ return y.c
 end
 end
 do -- z
-local function fn35()return{Accent=Color3.fromRGB(255,25,25),Outline=Color3.fromRGB(38,38,46),Background=Color3.fromRGB(12,12,15),ElementBackground=Color3.fromRGB(17,17,21),TabButtonSelected=Color3.fromRGB(170,15,25),Unselected=Color3.fromRGB(160,160,175),TextColor=Color3.fromRGB(240,240,245),ToggleCircleUnselected=Color3.fromRGB(160,160,175),ToggleBackgroundUnselected=Color3.fromRGB(38,38,46),GradientTop=Color3.fromRGB(17,17,21),GradientMid=Color3.fromRGB(12,12,15),GradientDark=Color3.fromRGB(8,8,10),GradientDeep=Color3.fromRGB(0,0,0),TabHighlight=Color3.fromRGB(170,15,25),TabShadow=Color3.fromRGB(90,10,15)};end
+local function fn35()return{Accent=Color3.fromRGB(197,59,59),Outline=Color3.fromRGB(24,25,24),Background=Color3.fromRGB(0,0,0),ElementBackground=Color3.fromRGB(6,6,6),TabButtonSelected=Color3.fromRGB(51,65,70),Unselected=Color3.fromRGB(75,72,72),TextColor=Color3.fromRGB(197,197,197),ToggleCircleUnselected=Color3.fromRGB(70,85,87),ToggleBackgroundUnselected=Color3.fromRGB(12,13,13),GradientTop=Color3.fromRGB(14,16,16),GradientMid=Color3.fromRGB(6,6,6),GradientDark=Color3.fromRGB(3,3,3),GradientDeep=Color3.fromRGB(0,0,0),TabHighlight=Color3.fromRGB(51,65,70),TabShadow=Color3.fromRGB(30,51,61)};end
 
 tbl17.z = function()
 local z = tbl17.cache.z
@@ -14800,7 +14806,6 @@ _batch = v122,
 Label = arg5.Label,
 _button = textButton,
 _icon = imageLabel,
-_label = instance2,
 _page = instance5,
 _body = frame2,
 _header = nil,
@@ -14841,24 +14846,19 @@ end
 
 index2._SetSelected = function(arg, selected)
 arg._selected = selected
+local str7 = "Unselected"
+local n = 1
+
 if selected then
-arg._menu:Tween(arg._button, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(255, 25, 25) })
+str7 = "Accent"
+n = 0
+end
+
+arg._menu:Tween(arg._button, { BackgroundTransparency = n })
 local icon = arg._icon
+
 if icon ~= nil then
-arg._menu:Tween(icon, { ImageColor3 = Color3.fromRGB(240, 240, 245) })
-end
-if arg._label ~= nil then
-arg._menu:Tween(arg._label, { TextColor3 = Color3.fromRGB(240, 240, 245) })
-end
-else
-arg._menu:Tween(arg._button, { BackgroundTransparency = 1 })
-local icon = arg._icon
-if icon ~= nil then
-arg._menu:Tween(icon, { ImageColor3 = Color3.fromRGB(160, 160, 175) })
-end
-if arg._label ~= nil then
-arg._menu:Tween(arg._label, { TextColor3 = Color3.fromRGB(160, 160, 175) })
-end
+arg._menu:Tween(icon, { ImageColor3 = v120.get(str7) })
 end
 end
 
@@ -15370,9 +15370,6 @@ end
 
 instance.AutoButtonColor = false
 arg3:Bind(instance, v86[5], "TabButtonSelected")
-local _khCorner = Instance.new("UICorner")
-_khCorner.CornerRadius = UDim.new(0, 8)
-_khCorner.Parent = instance
 instance.Parent = parent
 local imageLabel = Instance.new("ImageLabel")
 imageLabel.AnchorPoint = Vector2.new(v86[101], 0.5)
@@ -15446,15 +15443,15 @@ if arg._selected == selected then
 return
 end
 arg._selected = selected
+local str7 = "Unselected"
+
 if selected then
-arg._menu:Tween(arg.Button, { BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(170, 15, 25) })
-arg._menu:Tween(arg._icon, { ImageColor3 = Color3.fromRGB(240, 240, 245) })
-arg._menu:Tween(arg._label, { TextColor3 = Color3.fromRGB(240, 240, 245) })
-else
-arg._menu:Tween(arg.Button, { BackgroundTransparency = 1 })
-arg._menu:Tween(arg._icon, { ImageColor3 = Color3.fromRGB(160, 160, 175) })
-arg._menu:Tween(arg._label, { TextColor3 = Color3.fromRGB(160, 160, 175) })
+str7 = "Accent"
 end
+
+local v119 = v118.get(str7)
+arg._menu:Tween(arg._icon, { ImageColor3 = v119 })
+arg._menu:Tween(arg._label, { TextColor3 = v119 })
 end
 
 return index2
@@ -16816,19 +16813,19 @@ Inconsolata = Enum.Font.Code,
 
 local tbl19 = {
 Minecraftia = {
-Url = "https://github.com/kiwinhub-org/v3-assets/raw/refs/heads/main/Minecraftia-Regular.ttf",
+Url = "https://github.com/kiciahook-org/v3-assets/raw/refs/heads/main/Minecraftia-Regular.ttf",
 FileName = "Minecraftia-Regular.ttf",
 Weight = Enum.FontWeight.Regular,
 Style = Enum.FontStyle.Normal,
 },
 [v86[43]] = {
-Url = "https://github.com/kiwinhub-org/v3-assets/raw/refs/heads/main/Proggy-Clean.ttf",
+Url = "https://github.com/kiciahook-org/v3-assets/raw/refs/heads/main/Proggy-Clean.ttf",
 FileName = "Proggy-Clean.ttf",
 Weight = Enum.FontWeight.Regular,
 Style = Enum.FontStyle.Normal,
 },
 [v86[125]] = {
-Url = "https://github.com/kiwinhub-org/v3-assets/raw/refs/heads/main/Proggy-Tiny.ttf",
+Url = "https://github.com/kiciahook-org/v3-assets/raw/refs/heads/main/Proggy-Tiny.ttf",
 FileName = "Proggy-Tiny.ttf",
 Weight = Enum.FontWeight.Regular,
 Style = Enum.FontStyle.Normal,
@@ -17839,7 +17836,7 @@ arg:AddDropdown({ Label = "Font", Options = v115.Order, Config = v119.appendPath
 end
 
 return function(arg, arg2, arg3, arg4, arg5, arg6, arg7)
-local v120 = arg2:AddTab({ Label = "General", Icon = "rbxassetid://85870986242716" })
+local v120 = arg2:AddTab({ Label = "General", Icon = "rbxassetid://106205298246017" })
 local v121 = v120:Grid({ Columns = 2 })
 fn36(arg, arg4, v121)
 local v122 = arg2:AddTab({ Label = "Config Profiles" })
@@ -17848,6 +17845,7 @@ fn38(arg, arg3, v123)
 local v124 = fn39(arg, arg4, arg3, arg2, arg5)
 fn40(v121:AddSection({ Title = "Startup", Side = "left" }), arg, arg7)
 fn41(v121:AddSection({ Title = "Notifications", Side = "right" }), arg6)
+v121:AddSection({ Title = "Discord", Side = "right" }):AddButton({ Label = "Copy Discord Invite", OnClick = function() pcall(function() setclipboard("https://discord.gg/JtsGG79Tf") end) end })
 v121:AddSection({ Title = v86[199], Side = "right" }):AddButton({ Label = "Unload KiwinHub", Confirm = true, OnClick = arg4.Unload })
 return { General = { Page = v120, Grid = v121 }, ConfigProfiles = { Page = v122, Grid = v123 }, Theme = v124 }
 end
@@ -18152,7 +18150,7 @@ end
 index2.AddSettingsTab = function(arg)
 local v136 = arg:AddTab({
 Label = "Settings",
-Icon = "rbxassetid://85870986242716",
+Icon = "rbxassetid://106205298246017",
 Description = "Menu preferences, config management, and theme customization.",
 })
 
@@ -55702,11 +55700,11 @@ local tbl19 = {}
 for _, v115 in {
 {
 Name = "Soft Rain",
-Url = "https://github.com/kiwinhub-org/v3-assets/raw/refs/heads/main/soft-rain.ogg",
+Url = "https://github.com/kiciahook-org/v3-assets/raw/refs/heads/main/soft-rain.ogg",
 },
 {
 Name = "Light Rain",
-Url = "https://github.com/kiwinhub-org/v3-assets/raw/refs/heads/main/light-rain.ogg",
+Url = "https://github.com/kiciahook-org/v3-assets/raw/refs/heads/main/light-rain.ogg",
 },
 }, nil, nil do
 table.insert(tbl18, v115.Name)
@@ -58567,7 +58565,7 @@ return hz.c
 end
 end
 do -- h_
-local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P,a,e,c,E,p,T,t= tbl17 .hO(), tbl17 .hP(), tbl17 .hR(), tbl17 .hS(), tbl17 .hU(), tbl17 .hV(), tbl17 .hW(), tbl17 .hX(), tbl17 .hY(), tbl17 .hZ(),{Automation="rbxassetid://137529167135156",Detection="rbxassetid://132868138496209",Match="rbxassetid://99293705721130"};return function(l,x)l=x:AddTab({Label="Automation",Icon=t.Automation,Description="Match flow, loadouts, in-match automation, and detection."});x=l:AddTab({Label="Match Flow",Icon=t.Match,Description="Automate queueing, voting, bans, and respawns."}):Grid({Columns=2});a(x);c(x);W(x);e(x);N((l:AddTab({Label="Auto Loadout",Icon=t.Automation,Description="Configure map-specific and fallback loadouts."}):Grid({Columns=2})));x=l:AddTab({Label="In-Match Automation",Icon=t.Match,Description="Automate pickups, counters, and tripmines."}):Grid({Columns=2});P(x);I(x);T(x);x=l:AddTab({Label="Detection",Icon=t.Detection,Description="Detect hackers and moderators."}):Grid({Columns=2});E(x);p(x);end;end
+local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P,a,e,c,E,p,T,t= tbl17 .hO(), tbl17 .hP(), tbl17 .hR(), tbl17 .hS(), tbl17 .hU(), tbl17 .hV(), tbl17 .hW(), tbl17 .hX(), tbl17 .hY(), tbl17 .hZ(),{Automation="rbxassetid://70979486241131",Detection="rbxassetid://132868138496209",Match="rbxassetid://99293705721130"};return function(l,x)l=x:AddTab({Label="Automation",Icon=t.Automation,Description="Match flow, loadouts, in-match automation, and detection."});x=l:AddTab({Label="Match Flow",Icon=t.Match,Description="Automate queueing, voting, bans, and respawns."}):Grid({Columns=2});a(x);c(x);W(x);e(x);N((l:AddTab({Label="Auto Loadout",Icon=t.Automation,Description="Configure map-specific and fallback loadouts."}):Grid({Columns=2})));x=l:AddTab({Label="In-Match Automation",Icon=t.Match,Description="Automate pickups, counters, and tripmines."}):Grid({Columns=2});P(x);I(x);T(x);x=l:AddTab({Label="Detection",Icon=t.Detection,Description="Detect hackers and moderators."}):Grid({Columns=2});E(x);p(x);end;end
 
 tbl17.h_ = function()
 local h = tbl17.cache.h_
@@ -58862,7 +58860,7 @@ return ii.c
 end
 end
 do -- ij
-local function fn35()local I,W,N,P= tbl17 .aU(), tbl17 .gR(), tbl17 .aW(), tbl17 .aY(); tbl17 .aE(); tbl17 .hN();local a,e,c,E,p,T,t,x,S= tbl17 .h0(), tbl17 .h7(), tbl17 .h8(), tbl17 .h9(), tbl17 .ia(), tbl17 .ib(), tbl17 .ic(), tbl17 .id(),{Combat="rbxassetid://86075252657350",CameraAim="rbxassetid://83752373575368",SilentAim="rbxassetid://109514269737059",FireAssist="rbxassetid://81854854241463",WeaponHandling="rbxassetid://128279962545721",HitFeedback="rbxassetid://140427675871522",Ragebot="rbxassetid://125012650497883"};return function(J,B)local X=B:AddTab({Label="Combat",Icon=S.Combat,Description="Aim assistance, fire control, weapon handling, feedback, and ragebot."});local H=X:AddTab({Label="Aimbot",Icon=S.CameraAim,Description="Camera-based aim assistance and target locking."});local k,D=H:Grid({Columns=2}),table.clone(I.BuildSpec);D.PinHint="Hold a weapon, then click the pin next to a setting to give that weapon its own value.";a(J.StoreProfiles,e(k,D));D,k=X:AddTab({Label="Silent Aim",Icon=S.SilentAim,Description="Redirect projectiles toward targets without moving the camera."}):Grid({Columns=2}),table.clone(N.BuildSpec);k.PinHint="Hold a weapon, then click the pin next to a setting to give that weapon its own value.";a(J.StoreProfiles,E(D,k));k=X:AddTab({Label="Ragebot",Icon=S.Ragebot,Description="Aggressive targeting, weapon priority, and evasive movement."}):Grid({Columns=2});if W.IsArcadeServer then  tbl17 .ie()(k);else  tbl17 .ih()(k);end;D,k=X:AddTab({Label="Fire Assist",Icon=S.FireAssist,Description="Automatic firing and fast camera flicks."}):Grid({Columns=2}),table.clone(P.BuildSpec);k.PinHint="Hold a weapon, then click the pin next to a setting to give that weapon its own value.";a(J.StoreProfiles,p(D,k)); tbl17 .ii()(D,function()H:Open();end);x((X:AddTab({Label="Weapon Handling",Icon=S.WeaponHandling,Description="Aim, firing, cooldown, melee, and grenade behavior."}):Grid({Columns=2})));D,k=X:AddTab({Label="Hit Feedback",Icon=S.HitFeedback,Description="Sound, visual, flash, and notification feedback."}):Grid({Columns=2}),c(B,J.SfxSoundStorage);t(J,D,k);T(J,D,k);end;end
+local function fn35()local I,W,N,P= tbl17 .aU(), tbl17 .gR(), tbl17 .aW(), tbl17 .aY(); tbl17 .aE(); tbl17 .hN();local a,e,c,E,p,T,t,x,S= tbl17 .h0(), tbl17 .h7(), tbl17 .h8(), tbl17 .h9(), tbl17 .ia(), tbl17 .ib(), tbl17 .ic(), tbl17 .id(),{Combat="rbxassetid://99199363807265",CameraAim="rbxassetid://83752373575368",SilentAim="rbxassetid://109514269737059",FireAssist="rbxassetid://81854854241463",WeaponHandling="rbxassetid://128279962545721",HitFeedback="rbxassetid://140427675871522",Ragebot="rbxassetid://125012650497883"};return function(J,B)local X=B:AddTab({Label="Combat",Icon=S.Combat,Description="Aim assistance, fire control, weapon handling, feedback, and ragebot."});local H=X:AddTab({Label="Aimbot",Icon=S.CameraAim,Description="Camera-based aim assistance and target locking."});local k,D=H:Grid({Columns=2}),table.clone(I.BuildSpec);D.PinHint="Hold a weapon, then click the pin next to a setting to give that weapon its own value.";a(J.StoreProfiles,e(k,D));D,k=X:AddTab({Label="Silent Aim",Icon=S.SilentAim,Description="Redirect projectiles toward targets without moving the camera."}):Grid({Columns=2}),table.clone(N.BuildSpec);k.PinHint="Hold a weapon, then click the pin next to a setting to give that weapon its own value.";a(J.StoreProfiles,E(D,k));k=X:AddTab({Label="Ragebot",Icon=S.Ragebot,Description="Aggressive targeting, weapon priority, and evasive movement."}):Grid({Columns=2});if W.IsArcadeServer then  tbl17 .ie()(k);else  tbl17 .ih()(k);end;D,k=X:AddTab({Label="Fire Assist",Icon=S.FireAssist,Description="Automatic firing and fast camera flicks."}):Grid({Columns=2}),table.clone(P.BuildSpec);k.PinHint="Hold a weapon, then click the pin next to a setting to give that weapon its own value.";a(J.StoreProfiles,p(D,k)); tbl17 .ii()(D,function()H:Open();end);x((X:AddTab({Label="Weapon Handling",Icon=S.WeaponHandling,Description="Aim, firing, cooldown, melee, and grenade behavior."}):Grid({Columns=2})));D,k=X:AddTab({Label="Hit Feedback",Icon=S.HitFeedback,Description="Sound, visual, flash, and notification feedback."}):Grid({Columns=2}),c(B,J.SfxSoundStorage);t(J,D,k);T(J,D,k);end;end
 
 tbl17.ij = function()
 local ij = tbl17.cache.ij
@@ -59608,7 +59606,7 @@ return io.c
 end
 end
 do -- ip
-local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P= tbl17 .il(), tbl17 .im(), tbl17 .io(),{Overview="rbxassetid://89644754139307",Skins="rbxassetid://97652569554326",Wraps="rbxassetid://76631821212930",Charms="rbxassetid://125353572203968",Finishers="rbxassetid://82039875682356",Presets="rbxassetid://119633739754015"};return function(l,a)local e=a:AddTab({Label="Cosmetics",Icon="rbxassetid://133569512170316",Description="Manage cosmetic runtime, catalogs, and cosmetic presets."});N(l,(e:AddTab({Label="Presets",Icon=P.Presets,Description="Create, load, automate, and delete whole cosmetic loadouts."}):Grid({Columns=2})));W(l,e:AddTab({Label="Overview",Icon=P.Overview,Description="Enable cosmetic features, unlock cosmetics, reroll, and share your active look."}):Grid({Columns=2}),(I(l,{Skins=e:AddTab({Label="Skins",Icon=P.Skins,Description="Browse and apply weapon skin variants."}),Wraps=e:AddTab({Label="Wraps",Icon=P.Wraps,Description="Browse weapon wraps and control inverted patterns."}),Charms=e:AddTab({Label="Charms",Icon=P.Charms,Description="Browse weapon charms and optionally override rank charms."}),Finishers=e:AddTab({Label="Finishers",Icon=P.Finishers,Description="Browse and apply weapon finishers."})})));end;end
+local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P= tbl17 .il(), tbl17 .im(), tbl17 .io(),{Overview="rbxassetid://89644754139307",Skins="rbxassetid://97652569554326",Wraps="rbxassetid://76631821212930",Charms="rbxassetid://125353572203968",Finishers="rbxassetid://82039875682356",Presets="rbxassetid://119633739754015"};return function(l,a)local e=a:AddTab({Label="Cosmetics",Icon="rbxassetid://128162112866809",Description="Manage cosmetic runtime, catalogs, and cosmetic presets."});N(l,(e:AddTab({Label="Presets",Icon=P.Presets,Description="Create, load, automate, and delete whole cosmetic loadouts."}):Grid({Columns=2})));W(l,e:AddTab({Label="Overview",Icon=P.Overview,Description="Enable cosmetic features, unlock cosmetics, reroll, and share your active look."}):Grid({Columns=2}),(I(l,{Skins=e:AddTab({Label="Skins",Icon=P.Skins,Description="Browse and apply weapon skin variants."}),Wraps=e:AddTab({Label="Wraps",Icon=P.Wraps,Description="Browse weapon wraps and control inverted patterns."}),Charms=e:AddTab({Label="Charms",Icon=P.Charms,Description="Browse weapon charms and optionally override rank charms."}),Finishers=e:AddTab({Label="Finishers",Icon=P.Finishers,Description="Browse and apply weapon finishers."})})));end;end
 
 tbl17.ip = function()
 local ip = tbl17.cache.ip
@@ -59708,7 +59706,7 @@ return iv.c
 end
 end
 do -- iw
-local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P,a= tbl17 .iq(), tbl17 .ir(), tbl17 .is(), tbl17 .it(),{Player="rbxassetid://88381641494731",Movement="rbxassetid://114280087699339",Recorder="rbxassetid://70520152532392",Character="rbxassetid://101118444346965",Identity="rbxassetid://109514257830136"};return function(e,c)local E=c:AddTab({Label="Player",Icon=a.Player,Description="Movement, character appearance, and identity."});P((E:AddTab({Label="Movement",Icon=a.Movement,Description="Ground and air movement."}):Grid({Columns=2})));c=e.MovementRecorder;if c then  tbl17 .iu()(c,(E:AddTab({Label="Movement Recorder",Icon=a.Recorder,Description="Record, replay, and manage movement routes."}):Grid({Columns=2})));end;c=E:AddTab({Label="Character",Icon=a.Character,Description="Animations and character appearance."}):Grid({Columns=2});I(c);W(c);e=E:AddTab({Label="Identity Spoofing",Icon=a.Identity,Description="Presented device and player identity."}):Grid({Columns=2});N(e); tbl17 .iv()(e);end;end
+local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P,a= tbl17 .iq(), tbl17 .ir(), tbl17 .is(), tbl17 .it(),{Player="rbxassetid://114567720540659",Movement="rbxassetid://114280087699339",Recorder="rbxassetid://70520152532392",Character="rbxassetid://101118444346965",Identity="rbxassetid://109514257830136"};return function(e,c)local E=c:AddTab({Label="Player",Icon=a.Player,Description="Movement, character appearance, and identity."});P((E:AddTab({Label="Movement",Icon=a.Movement,Description="Ground and air movement."}):Grid({Columns=2})));c=e.MovementRecorder;if c then  tbl17 .iu()(c,(E:AddTab({Label="Movement Recorder",Icon=a.Recorder,Description="Record, replay, and manage movement routes."}):Grid({Columns=2})));end;c=E:AddTab({Label="Character",Icon=a.Character,Description="Animations and character appearance."}):Grid({Columns=2});I(c);W(c);e=E:AddTab({Label="Identity Spoofing",Icon=a.Identity,Description="Presented device and player identity."}):Grid({Columns=2});N(e); tbl17 .iv()(e);end;end
 
 tbl17.iw = function()
 local iw = tbl17.cache.iw
@@ -60072,7 +60070,7 @@ return iz.c
 end
 end
 do -- i_
-local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P,a,e= tbl17 .iB(), tbl17 .iL(), tbl17 .iQ(), tbl17 .iR(), tbl17 .iZ(),{Visuals="rbxassetid://101685064640916",PlayerEsp="rbxassetid://85332511060401",Crosshair="rbxassetid://83752373575368",Weapon="rbxassetid://121406454377051",Camera="rbxassetid://114084146151777",Sound="rbxassetid://102139623610548"};return function(l,c)local E=c:AddTab({Label="Visuals",Icon=e.Visuals,Description="Player information, crosshair, weapon, camera, and sound visuals."});N(l,c,(E:AddTab({Label="Player ESP",Icon=e.PlayerEsp,Description="Player overlays, team-specific styling, and a synchronized preview."}):Grid({Columns=2})));W(l,c,(E:AddTab({Label="Crosshair",Icon=e.Crosshair,Description="Crosshair lines, images, text, motion, and target-follow effects."}):Grid({Columns=2})));a((E:AddTab({Label="Weapon Visuals",Icon=e.Weapon,Description="Viewmodel position, materials, motion, and projectile effects."}):Grid({Columns=2})));I((E:AddTab({Label="Camera & Screen",Icon=e.Camera,Description="Third person, camera field of view, overlays, and screen scaling."}):Grid({Columns=2})));P((E:AddTab({Label="Sound ESP",Icon=e.Sound,Description="Visualize footsteps and other sounds by source and loudness."}):Grid({Columns=2})));end;end
+local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P,a,e= tbl17 .iB(), tbl17 .iL(), tbl17 .iQ(), tbl17 .iR(), tbl17 .iZ(),{Visuals="rbxassetid://127234874352422",PlayerEsp="rbxassetid://85332511060401",Crosshair="rbxassetid://83752373575368",Weapon="rbxassetid://121406454377051",Camera="rbxassetid://114084146151777",Sound="rbxassetid://102139623610548"};return function(l,c)local E=c:AddTab({Label="Visuals",Icon=e.Visuals,Description="Player information, crosshair, weapon, camera, and sound visuals."});N(l,c,(E:AddTab({Label="Player ESP",Icon=e.PlayerEsp,Description="Player overlays, team-specific styling, and a synchronized preview."}):Grid({Columns=2})));W(l,c,(E:AddTab({Label="Crosshair",Icon=e.Crosshair,Description="Crosshair lines, images, text, motion, and target-follow effects."}):Grid({Columns=2})));a((E:AddTab({Label="Weapon Visuals",Icon=e.Weapon,Description="Viewmodel position, materials, motion, and projectile effects."}):Grid({Columns=2})));I((E:AddTab({Label="Camera & Screen",Icon=e.Camera,Description="Third person, camera field of view, overlays, and screen scaling."}):Grid({Columns=2})));P((E:AddTab({Label="Sound ESP",Icon=e.Sound,Description="Visualize footsteps and other sounds by source and loudness."}):Grid({Columns=2})));end;end
 
 tbl17.i_ = function()
 local i = tbl17.cache.i_
@@ -60294,7 +60292,7 @@ return jd.c
 end
 end
 do -- je
-local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P= tbl17 .i1(), tbl17 .i8(), tbl17 .jd(),{World="rbxassetid://85870986242716",Lighting="rbxassetid://139232691165198",PostProcessing="rbxassetid://139684165362622",SkyWeather="rbxassetid://140109651313859"};return function(l,a)local e=a:AddTab({Label="World",Icon=P.World,Description="Lighting, post-processing, sky, and ambient sound."});I((e:AddTab({Label="Lighting",Icon=P.Lighting,Description="Override time, exposure, shadows, ambient light, fog, and atmosphere."}):Grid({Columns=2})));W((e:AddTab({Label="Post Processing",Icon=P.PostProcessing,Description="Tune tone, focus, motion, and light effects."}):Grid({Columns=2})));N(l,e:AddTab({Label="Sky & Weather",Icon=P.SkyWeather,Description="Choose a skybox, ambient sound, weather, and lightning."}):Grid({Columns=2}),a);end;end
+local function fn35() tbl17 .aE(); tbl17 .hN();local I,W,N,P= tbl17 .i1(), tbl17 .i8(), tbl17 .jd(),{World="rbxassetid://125685532120024",Lighting="rbxassetid://139232691165198",PostProcessing="rbxassetid://139684165362622",SkyWeather="rbxassetid://140109651313859"};return function(l,a)local e=a:AddTab({Label="World",Icon=P.World,Description="Lighting, post-processing, sky, and ambient sound."});I((e:AddTab({Label="Lighting",Icon=P.Lighting,Description="Override time, exposure, shadows, ambient light, fog, and atmosphere."}):Grid({Columns=2})));W((e:AddTab({Label="Post Processing",Icon=P.PostProcessing,Description="Tune tone, focus, motion, and light effects."}):Grid({Columns=2})));N(l,e:AddTab({Label="Sky & Weather",Icon=P.SkyWeather,Description="Choose a skybox, ambient sound, weather, and lightning."}):Grid({Columns=2}),a);end;end
 
 tbl17.je = function()
 local je = tbl17.cache.je
@@ -60309,7 +60307,7 @@ return je.c
 end
 end
 do -- jf
-local function fn35()local I,W= tbl17 .bG(), tbl17 .aE(); tbl17 .hN();local N,P,a,e,c,E,p,T= tbl17 .h_(), tbl17 .ij(), tbl17 .ip(), tbl17 .n(), tbl17 .iw(), tbl17 .i_(), tbl17 .je(),cloneref(game:GetService("Players")).LocalPlayer;return function(l)if getgenv().KhForceMobileUi==true then W.ForceMobileLayout();end;local t=W.Menu.new({Icon="rbxassetid://115528029499362",Title=string.format("KiwinHub | Rivals | %s",tostring("Free Version")),Directory="kiciarebuild/rivals",Config=l.ReactiveStoreAdapter,ColorAnimation=l.ColorAnimation,Persistence=I,State=l.GeneralState,StateData=l.GeneralStateData,OnUnload=function()e:Destroy();end});e:Add(t);local I=l.PlayerIdentities;t:SetWatermarkUsername(I:GetPresented(T));e:Connect(I.IdentityChanged,function(W)if W==T then t:SetWatermarkUsername(I:GetPresented(T));end;end);P(l,t);E(l,t);c(l,t);N(l,t);p(l,t);a(l,t);t:AddSettingsTab();t:SetVisible(true,true);getgenv()._KiwinHubMenu = t;end;end
+local function fn35()local I,W= tbl17 .bG(), tbl17 .aE(); tbl17 .hN();local N,P,a,e,c,E,p,T= tbl17 .h_(), tbl17 .ij(), tbl17 .ip(), tbl17 .n(), tbl17 .iw(), tbl17 .i_(), tbl17 .je(),cloneref(game:GetService("Players")).LocalPlayer;return function(l)if getgenv().KhForceMobileUi==true then W.ForceMobileLayout();end;local t=W.Menu.new({Icon="rbxassetid://115528029499362",Title=string.format("KiwinHub | Rivals | %s",tostring("Free Version")),Directory="kiciarebuild/rivals",Config=l.ReactiveStoreAdapter,ColorAnimation=l.ColorAnimation,Persistence=I,State=l.GeneralState,StateData=l.GeneralStateData,OnUnload=function()e:Destroy();end});e:Add(t);local I=l.PlayerIdentities;t:SetWatermarkUsername(I:GetPresented(T));e:Connect(I.IdentityChanged,function(W)if W==T then t:SetWatermarkUsername(I:GetPresented(T));end;end);P(l,t);E(l,t);c(l,t);N(l,t);p(l,t);a(l,t);t:AddSettingsTab();t:SetVisible(not(l.GeneralStateData.SilentLoad==true),true);end;end
 
 tbl17.jf = function()
 local jf = tbl17.cache.jf
@@ -66303,139 +66301,6 @@ tbl17.w().ensureStorageDirectories("kiciahook/rivals_v3")
 tbl17.w().ensureStorageDirectories("kiciahook/rivals_v3/cosmetics/states")
 tbl17.w().ensureStorageDirectories("kiciarebuild/fonts")
 tbl17.w().ensureStorageDirectories("kiciarebuild/cache")
-
---==========================================================================
---  KiwinHub Loading Screen (Kiwin UI)
---==========================================================================
-local _KH_Players = game:GetService("Players")
-local _KH_Tween = game:GetService("TweenService")
-local _KH_Run = game:GetService("RunService")
-local _KH_Local = _KH_Players.LocalPlayer
-local _KH_Gui = _KH_Local:WaitForChild("PlayerGui")
-do
-    pcall(function()
-        local o = _KH_Gui:FindFirstChild("ScriptHubLoader")
-        if o then o:Destroy() end
-        local o2 = _KH_Gui:FindFirstChild("KiwinHubLoader")
-        if o2 then o2:Destroy() end
-    end)
-    local loaderGui = Instance.new("ScreenGui")
-    loaderGui.Name = "KiwinHubLoader"
-    loaderGui.ResetOnSpawn = false
-    loaderGui.IgnoreGuiInset = true
-    loaderGui.DisplayOrder = 100000
-    loaderGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    loaderGui.Parent = _KH_Gui
-    local BG_C = Color3.fromRGB(12,12,15)
-    local CARD_C = Color3.fromRGB(17,17,21)
-    local RED_C = Color3.fromRGB(255,25,25)
-    local GRAY_C = Color3.fromRGB(160,160,175)
-    local WHITE_C = Color3.fromRGB(240,240,245)
-    local LINE_C = Color3.fromRGB(38,38,46)
-    local backdrop = Instance.new("Frame")
-    backdrop.BackgroundColor3 = BG_C
-    backdrop.BorderSizePixel = 0
-    backdrop.Size = UDim2.fromScale(1,1)
-    backdrop.Active = true
-    backdrop.Parent = loaderGui
-    local card = Instance.new("Frame")
-    card.BackgroundColor3 = CARD_C
-    card.BorderSizePixel = 0
-    card.AnchorPoint = Vector2.new(0.5,0.5)
-    card.Position = UDim2.fromScale(0.5,0.5)
-    card.Size = UDim2.fromOffset(380,320)
-    card.Active = true
-    card.Parent = loaderGui
-    local cc = Instance.new("UICorner"); cc.CornerRadius = UDim.new(0,14); cc.Parent = card
-    local cs = Instance.new("UIStroke"); cs.Color = RED_C; cs.Thickness = 2; cs.Parent = card
-    local logo = Instance.new("ImageLabel")
-    logo.BackgroundTransparency = 1
-    logo.Image = "rbxassetid://115528029499362"
-    logo.ImageColor3 = WHITE_C
-    logo.ScaleType = Enum.ScaleType.Fit
-    logo.AnchorPoint = Vector2.new(0.5,0)
-    logo.Position = UDim2.new(0.5,0,0,18)
-    logo.Size = UDim2.fromOffset(130,130)
-    logo.Parent = card
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Text = "KIWIN HUB"
-    title.TextColor3 = WHITE_C
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 24
-    title.AnchorPoint = Vector2.new(0.5,0)
-    title.Position = UDim2.new(0.5,0,0,154)
-    title.Size = UDim2.new(1,-30,0,30)
-    title.Parent = card
-    local sub = Instance.new("TextLabel")
-    sub.BackgroundTransparency = 1
-    sub.Text = "https://discord.gg/JNuheYwQe"
-    sub.TextColor3 = GRAY_C
-    sub.Font = Enum.Font.Gotham
-    sub.TextSize = 12
-    sub.AnchorPoint = Vector2.new(0.5,0)
-    sub.Position = UDim2.new(0.5,0,0,184)
-    sub.Size = UDim2.new(1,-30,0,18)
-    sub.Parent = card
-    local status = Instance.new("TextLabel")
-    status.BackgroundTransparency = 1
-    status.Text = "Initializing KiwinHub..."
-    status.TextColor3 = GRAY_C
-    status.Font = Enum.Font.Gotham
-    status.TextSize = 13
-    status.AnchorPoint = Vector2.new(0.5,0)
-    status.Position = UDim2.new(0.5,0,0,204)
-    status.Size = UDim2.new(1,-30,0,22)
-    status.Parent = card
-    local barBack = Instance.new("Frame")
-    barBack.BackgroundColor3 = LINE_C
-    barBack.BorderSizePixel = 0
-    barBack.AnchorPoint = Vector2.new(0.5,0)
-    barBack.Position = UDim2.new(0.5,0,0,230)
-    barBack.Size = UDim2.fromOffset(300,8)
-    barBack.Parent = card
-    local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,4); bc.Parent = barBack
-    local bar = Instance.new("Frame")
-    bar.BackgroundColor3 = RED_C
-    bar.BorderSizePixel = 0
-    bar.Size = UDim2.new(0,0,1,0)
-    bar.Parent = barBack
-    local bfc = Instance.new("UICorner"); bfc.CornerRadius = UDim.new(0,4); bfc.Parent = bar
-    local percent = Instance.new("TextLabel")
-    percent.BackgroundTransparency = 1
-    percent.Text = "0%"
-    percent.TextColor3 = WHITE_C
-    percent.Font = Enum.Font.GothamMedium
-    percent.TextSize = 12
-    percent.TextXAlignment = Enum.TextXAlignment.Right
-    percent.AnchorPoint = Vector2.new(1,0)
-    percent.Position = UDim2.new(1,-40,0,242)
-    percent.Size = UDim2.fromOffset(60,20)
-    percent.Parent = card
-    local credit = Instance.new("TextLabel")
-    credit.BackgroundTransparency = 1
-    credit.Text = "Made by kai"
-    credit.TextColor3 = GRAY_C
-    credit.Font = Enum.Font.Gotham
-    credit.TextSize = 11
-    credit.AnchorPoint = Vector2.new(0.5,0)
-    credit.Position = UDim2.new(0.5,0,1,-30)
-    credit.Size = UDim2.new(1,-30,0,18)
-    credit.Parent = card
-    getgenv()._KiwinHubLoader = { Gui = loaderGui, Bar = bar, Status = status, Percent = percent }
-    getgenv()._KiwinHubSetProgress = function(v, msg)
-        pcall(function()
-            local d = getgenv()._KiwinHubLoader
-            if not d or not d.Gui.Parent then return end
-            v = math.clamp(tonumber(v) or 0, 0, 100)
-            if msg then d.Status.Text = msg end
-            d.Percent.Text = tostring(math.floor(v+0.5)).."%"
-            _KH_Tween:Create(d.Bar, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(v/100,0,1,0)}):Play()
-        end)
-    end
-    pcall(function() getgenv()._KiwinHubSetProgress(5, "Creating KiwinHub GUI...") _KH_Run.RenderStepped:Wait() end)
-end
-
 for _, sub in ipairs({ "cosmetics/states", "crosshair_textures", "esp_images", "movement_recorder" }) do
     tbl17.w().ensureStorageDirectories("kiciarebuild/rivals/" .. sub)
 end
@@ -66463,22 +66328,16 @@ do
     local wrf, gca = K.fn("writefile"), K.fn("getcustomasset") or K.fn("getsynasset")
     if wrf and gca then
         local path = "kiciarebuild/lithium_logo.png"
-        local _ok = pcall(function() wrf(path, decode(LITHIUM_LOGO_B64)) end)
+        local _ok = pcall(wrf, path, decode(LITHIUM_LOGO_B64))
         local _ok2, _id = pcall(gca, path)
         --  Kicia's original logo is used; the Lithium one is no longer applied.
--- KiwinHub logo override (Kiwin cat)
-K.LithiumLogo = "rbxassetid://115528029499362"
-K.KiwinLogo = "rbxassetid://115528029499362"
-K.KiwinDiscord = "https://discord.gg/JNuheYwQe"
-K.KiwinCredit = "kai"
-
     end
 end
 
 --  Kicia's error reporter needs a sink; ours prints to the F9 console.
 tbl17.b().use({ Report = function(_, e)
     local detail = type(e) == "table" and (e.Detail or e.Operation) or e
-    warn("[Kicia Rebuild] " .. tostring(detail))
+    warn("[KiwinHub] " .. tostring(detail))
 end })
 
 local boot = (function()
@@ -66537,134 +66396,8 @@ function K.Unload()
     K.destroyed = true
     for _, f in ipairs(K.cleanups) do pcall(f) end
     pcall(function() GlobalTrove:Destroy() end)
+    if getgenv().KiciaRebuild == K then getgenv().KiciaRebuild = nil end
     if getgenv().KiwinHub == K then getgenv().KiwinHub = nil end
 end
 
--- Phone executors often lack filesystem fns; shim missing ones so boot can continue (no persistence, defaults used)
-pcall(function()
-    if isfile == nil then isfile = function() return false end end
-    if isfolder == nil then isfolder = function() return false end end
-    if makefolder == nil then makefolder = function() end end
-    if readfile == nil then readfile = function() error("readfile unavailable") end end
-    if writefile == nil then writefile = function() end end
-    if listfiles == nil then listfiles = function() return {} end end
-    if delfile == nil then delfile = function() end end
-end)
-pcall(function() getgenv()._KiwinHubSetProgress(35, "Loading features...") end)
-task.wait(0.2)
-local _khBootOk, _khBootErr = pcall(function() tbl17.j1()(boot) end)
-getgenv()._KhBootOk, getgenv()._KhBootErr = _khBootOk, _khBootErr
-
---==========================================================================
---  KiwinHub finish: close loader, watermark credit, floating minimize
---==========================================================================
-if not getgenv()._KhBootOk then
-    pcall(function()
-        local d = getgenv()._KiwinHubLoader
-        if d and d.Gui and d.Gui.Parent then
-            d.Status.TextWrapped = true
-            d.Status.TextSize = 11
-            d.Status.Size = UDim2.new(1, -30, 0, 110)
-            d.Status.Text = "Load failed: " .. tostring(getgenv()._KhBootErr):sub(1, 400)
-            if d.Bar and d.Bar.Parent then d.Bar.Parent.Visible = false end
-            if d.Percent then d.Percent.Visible = false end
-        end
-    end)
-    warn("[KiwinHub] boot failed: " .. tostring(getgenv()._KhBootErr))
-else
-pcall(function() getgenv()._KiwinHubSetProgress(100, "All KiwinHub buttons loaded") end)
-task.wait(0.25)
-pcall(function()
-    local d = getgenv()._KiwinHubLoader
-    if d and d.Gui then
-        local fi = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        for _, obj in ipairs(d.Gui:GetDescendants()) do
-            if obj:IsA("GuiObject") then
-                local goal = {BackgroundTransparency = 1}
-                if obj:IsA("TextLabel") then goal.TextTransparency = 1
-                elseif obj:IsA("ImageLabel") then goal.ImageTransparency = 1 end
-                pcall(function() game:GetService("TweenService"):Create(obj, fi, goal):Play() end)
-            elseif obj:IsA("UIStroke") then
-                pcall(function() game:GetService("TweenService"):Create(obj, fi, {Transparency = 1}):Play() end)
-            end
-        end
-        task.wait(0.4)
-        d.Gui:Destroy()
-    end
-end)
--- Watermark credit: append discord + kai (best effort, non-breaking)
-pcall(function()
-    -- The menu object is internal to jf; watermark already shows KiwinHub title via Menu.new Title.
-    -- Add floating minimize button (Kiwin style) that toggles menu with RightShift logic.
-    local plr = game:GetService("Players").LocalPlayer
-    local pg = plr:WaitForChild("PlayerGui")
-    local UIS = game:GetService("UserInputService")
-    local old = pg:FindFirstChild("KiwinHubFloat")
-    if old then old:Destroy() end
-    local g = Instance.new("ScreenGui")
-    g.Name = "KiwinHubFloat"
-    g.ResetOnSpawn = false
-    g.IgnoreGuiInset = true
-    g.DisplayOrder = 99998
-    g.Parent = pg
-    local b = Instance.new("ImageButton")
-    b.Name = "FloatingToggle"
-    b.BackgroundTransparency = 1
-    b.AnchorPoint = Vector2.new(0,0.5)
-    b.Position = UDim2.fromOffset(20,300)
-    b.Size = UDim2.fromOffset(48,48)
-    b.Image = "rbxassetid://116226869684543"
-    b.ScaleType = Enum.ScaleType.Fit
-    b.Visible = true
-    b.Parent = g
-    local _khFloatCorner = Instance.new("UICorner")
-    _khFloatCorner.CornerRadius = UDim.new(0, 12)
-    _khFloatCorner.Parent = b
-    local _khFloatStroke = Instance.new("UIStroke")
-    _khFloatStroke.Color = Color3.fromRGB(0, 0, 0)
-    _khFloatStroke.Thickness = 2
-    _khFloatStroke.Parent = b
-    -- Click toggles KiwinHub menu (works even if RightShift hotkey missed)
-    b.MouseButton1Click:Connect(function()
-        pcall(function()
-            local m = getgenv()._KiwinHubMenu
-            if m and m.SetVisible then
-                m:SetVisible(not m.Visible)
-            end
-        end)
-    end)
-    do
-        local dragging, dragStart, startPos
-        b.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-                dragging = true; dragStart = i.Position; startPos = b.Position
-            end
-        end)
-        UIS.InputChanged:Connect(function(i)
-            if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                local dpos = i.Position - dragStart
-                b.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + dpos.X, startPos.Y.Scale, startPos.Y.Offset + dpos.Y)
-            end
-        end)
-        UIS.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
-        end)
-    end
-    getgenv()._KiwinHubFloat = b
-    -- Phone: start with menu hidden, only the cat button stays
-    pcall(function()
-        local uis = game:GetService("UserInputService")
-        if uis.TouchEnabled and not uis.KeyboardEnabled then
-            local m = getgenv()._KiwinHubMenu
-            if m and m.SetVisible then m:SetVisible(false) end
-        end
-    end)
-end)
--- Unload rename: expose KiwinHub unload
-pcall(function()
-    if getgenv().KiwinHub and getgenv().KiwinHub.Unload then
-        getgenv().KiwinHubUnload = getgenv().KiwinHub.Unload
-    end
-end)
-print("[KiwinHub] Loaded OK - press RightShift or cat button. Discord: https://discord.gg/JNuheYwQe - Made by kai")
-end
+tbl17.j1()(boot)
