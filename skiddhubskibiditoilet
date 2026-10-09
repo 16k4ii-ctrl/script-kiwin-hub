@@ -1805,7 +1805,7 @@ return r.c
 end
 end
 do -- s
-local function fn35()return table.freeze({Medium=Font.fromEnum(Enum.Font.GothamMedium),SemiBold=Font.fromEnum(Enum.Font.GothamMedium),Bold=Font.fromEnum(Enum.Font.GothamBold)});end
+local function fn35()return table.freeze({Medium=Font.new("rbxassetid://12187365364",Enum.FontWeight.Medium,Enum.FontStyle.Normal),SemiBold=Font.new("rbxassetid://12187365364",Enum.FontWeight.SemiBold,Enum.FontStyle.Normal),Bold=Font.new("rbxassetid://12187365364",Enum.FontWeight.Bold,Enum.FontStyle.Normal)});end
 
 tbl17.s = function()
 local s = tbl17.cache.s
@@ -1854,7 +1854,7 @@ return u.c
 end
 end
 do -- v
-local function fn35()local I,W,N,P= tbl17 .u(),{},table.freeze({IsCompact=false,Rail=table.freeze({Width=100,HeaderHeight=85,TabsTop=102,TabSize=66,TabGap=4,TabIconSize=26,LogoSize=Vector2.new(48,37),ShowLabels=true}),Page=table.freeze({HasTitleBlock=true,OuterInset=18,HorizontalInset=17,HeaderHeight=85,TabsHeight=84,BottomInset=17,TitleTextSize=18,DescriptionTextSize=13,TabMinWidth=50,TabHeight=50,TabIconSize=24,TabTextSize=16,TabGap=14,TabPaddingLeft=13,TabPaddingRight=16,SearchCollapsedWidth=90,SearchExpandedWidth=260,SearchHeight=33,SearchRightInset=14}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=17,MinColumnWidth=220}),Section=table.freeze({Gap=17,TitleGap=16,InnerPadding=12,ElementGap=12,GroupGap=12,TitleTextSize=16,MultiHeaderHeight=45,MultiHeaderGap=12,MultiHeaderPadding=12,MultiPaneTop=57,MultiTabTextSize=16}),Row=table.freeze({Height=24,TextSize=16,ControlVerticalInset=0,ControlHeight=22,AttachmentGap=11,ListRowHeight=26}),Button=table.freeze({RowHeight=24,VisualHeight=22,Gap=13})}),table.freeze({IsCompact=true,Rail=table.freeze({Width=52,HeaderHeight=48,TabsTop=52,TabSize=44,TabGap=2,TabIconSize=20,LogoSize=Vector2.new(24,19),ShowLabels=false}),Page=table.freeze({HasTitleBlock=true,OuterInset=12,HorizontalInset=12,HeaderHeight=44,TabsHeight=40,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=34,TabIconSize=18,TabTextSize=13,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=12,MinColumnWidth=220}),Section=table.freeze({Gap=12,TitleGap=8,InnerPadding=8,ElementGap=8,GroupGap=8,TitleTextSize=15,MultiHeaderHeight=36,MultiHeaderGap=8,MultiHeaderPadding=8,MultiPaneTop=44,MultiTabTextSize=13}),Row=table.freeze({Height=32,TextSize=14,ControlVerticalInset=4,ControlHeight=24,AttachmentGap=8,ListRowHeight=32}),Button=table.freeze({RowHeight=32,VisualHeight=30,Gap=8})});local l=table.freeze({IsCompact=true,Rail=P.Rail,Page=table.freeze({HasTitleBlock=false,OuterInset=12,HorizontalInset=12,HeaderHeight=0,TabsHeight=44,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=36,TabIconSize=18,TabTextSize=14,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=P.Navigation,Grid=table.freeze({Gap=12,MinColumnWidth=330}),Section=P.Section,Row=table.freeze({Height=40,TextSize=15,ControlVerticalInset=6,ControlHeight=28,AttachmentGap=8,ListRowHeight=40}),Button=table.freeze({RowHeight=40,VisualHeight=36,Gap=8})});W.get=function()if not I.IsMobile()then return N;end;if I.IsTablet()then return P;end;return l;end;return W;end
+local function fn35()local I,W,N,P= tbl17 .u(),{},table.freeze({IsCompact=false,Rail=table.freeze({Width=100,HeaderHeight=85,TabsTop=102,TabSize=66,TabGap=0,TabIconSize=26,LogoSize=Vector2.new(48,37),ShowLabels=true}),Page=table.freeze({HasTitleBlock=true,OuterInset=18,HorizontalInset=17,HeaderHeight=85,TabsHeight=84,BottomInset=17,TitleTextSize=18,DescriptionTextSize=13,TabMinWidth=50,TabHeight=50,TabIconSize=24,TabTextSize=16,TabGap=14,TabPaddingLeft=13,TabPaddingRight=16,SearchCollapsedWidth=90,SearchExpandedWidth=260,SearchHeight=33,SearchRightInset=14}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=17,MinColumnWidth=220}),Section=table.freeze({Gap=17,TitleGap=16,InnerPadding=12,ElementGap=12,GroupGap=12,TitleTextSize=16,MultiHeaderHeight=45,MultiHeaderGap=12,MultiHeaderPadding=12,MultiPaneTop=57,MultiTabTextSize=16}),Row=table.freeze({Height=24,TextSize=16,ControlVerticalInset=0,ControlHeight=22,AttachmentGap=11,ListRowHeight=26}),Button=table.freeze({RowHeight=24,VisualHeight=22,Gap=13})}),table.freeze({IsCompact=true,Rail=table.freeze({Width=52,HeaderHeight=48,TabsTop=52,TabSize=44,TabGap=0,TabIconSize=20,LogoSize=Vector2.new(24,19),ShowLabels=false}),Page=table.freeze({HasTitleBlock=true,OuterInset=12,HorizontalInset=12,HeaderHeight=44,TabsHeight=40,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=34,TabIconSize=18,TabTextSize=13,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=table.freeze({CueDepth=12,RevealPadding=4,VisibilityEpsilon=1}),Grid=table.freeze({Gap=12,MinColumnWidth=220}),Section=table.freeze({Gap=12,TitleGap=8,InnerPadding=8,ElementGap=8,GroupGap=8,TitleTextSize=15,MultiHeaderHeight=36,MultiHeaderGap=8,MultiHeaderPadding=8,MultiPaneTop=44,MultiTabTextSize=13}),Row=table.freeze({Height=32,TextSize=14,ControlVerticalInset=4,ControlHeight=24,AttachmentGap=8,ListRowHeight=32}),Button=table.freeze({RowHeight=32,VisualHeight=30,Gap=8})});local l=table.freeze({IsCompact=true,Rail=P.Rail,Page=table.freeze({HasTitleBlock=false,OuterInset=12,HorizontalInset=12,HeaderHeight=0,TabsHeight=44,BottomInset=12,TitleTextSize=16,DescriptionTextSize=10,TabMinWidth=44,TabHeight=36,TabIconSize=18,TabTextSize=14,TabGap=6,TabPaddingLeft=8,TabPaddingRight=10,SearchCollapsedWidth=32,SearchExpandedWidth=220,SearchHeight=32,SearchRightInset=8}),Navigation=P.Navigation,Grid=table.freeze({Gap=12,MinColumnWidth=330}),Section=P.Section,Row=table.freeze({Height=40,TextSize=15,ControlVerticalInset=6,ControlHeight=28,AttachmentGap=8,ListRowHeight=40}),Button=table.freeze({RowHeight=40,VisualHeight=36,Gap=8})});W.get=function()if not I.IsMobile()then return N;end;if I.IsTablet()then return P;end;return l;end;return W;end
 
 tbl17.v = function()
 local v115 = tbl17.cache.v
@@ -8479,7 +8479,7 @@ textButton.Position = UDim2.new(1, n33, 0.5, 0)
 textButton.Size = UDim2.fromOffset(n34, n34)
 textButton.BackgroundTransparency = 1
 textButton.BorderSizePixel = 0
-textButton.Text = "â–²"
+textButton.Text = "▲"
 textButton.TextSize = textSize
 textButton.AutoButtonColor = false
 textButton.FontFace = menu.Fonts.Main
@@ -8491,7 +8491,7 @@ textButton2.Position = UDim2.new(1, -4, 0.5, 0)
 textButton2.Size = UDim2.fromOffset(n34, n34)
 textButton2.BackgroundTransparency = 1
 textButton2.BorderSizePixel = 0
-textButton2.Text = "â–¼"
+textButton2.Text = "▼"
 textButton2.TextSize = textSize
 textButton2.AutoButtonColor = v86[153]
 textButton2.FontFace = menu.Fonts.Main
@@ -8860,7 +8860,7 @@ uiStroke.Parent = frame3
 local instance4 = Instance.new(v86[135])
 instance4.BackgroundTransparency = 1
 instance4.Size = UDim2.fromScale(1, 1)
-instance4.Text = "âœ“"
+instance4.Text = "✓"
 instance4.FontFace = v116.Bold
 instance4.TextSize = 15
 instance4.TextColor3 = Color3.fromRGB(v86[108], v86[108], 255)
@@ -10666,7 +10666,7 @@ v141 = label
 end
 end
 
-str7 = ("%s  â€º  Requires %s: %s"):format(arg2, v141, groupSpec.Option or "On")
+str7 = ("%s  ›  Requires %s: %s"):format(arg2, v141, groupSpec.Option or "On")
 local resolveFrame = tbl18.ResolveFrame
 
 tbl19 = {
@@ -10735,7 +10735,7 @@ end,
 
 local title = v142.Title
 assert(typeof(title) == "string", "Container pane title must be a string")
-v142:CollectSearchHits(("%s  â€º  %s"):format(str7, title), arg3, arg4, tbl20)
+v142:CollectSearchHits(("%s  ›  %s"):format(str7, title), arg3, arg4, tbl20)
 end
 end
 end
@@ -10762,7 +10762,7 @@ v141:_RevealGear()
 end,
 }
 
-v141:CollectSearchHits(("%s  â€º  %s"):format(str7, tostring(gearTooltip)), arg3, arg4, tbl20)
+v141:CollectSearchHits(("%s  ›  %s"):format(str7, tostring(gearTooltip)), arg3, arg4, tbl20)
 end
 end
 
@@ -11277,7 +11277,7 @@ textLabel3.Position = UDim2.new(1, -11, 0.5, 0)
 textLabel3.Size = UDim2.fromOffset(16, 24)
 textLabel3.BackgroundTransparency = 1
 textLabel3.BorderSizePixel = 0
-textLabel3.Text = "â€º"
+textLabel3.Text = "›"
 textLabel3.TextSize = 18
 textLabel3.FontFace = v118.SemiBold
 arg3:Bind(textLabel3, "TextColor3", "Unselected")
@@ -11462,7 +11462,7 @@ instance3.Position = UDim2.new(v86[63], -10, 0, 10)
 instance3.Size = UDim2.fromOffset(26, v86[200])
 instance3.BackgroundTransparency = v86[63]
 instance3.BorderSizePixel = 0
-instance3.Text = "Ã—"
+instance3.Text = "×"
 instance3.TextSize = 18
 instance3.FontFace = v118.SemiBold
 instance3.AutoButtonColor = false
@@ -14251,13 +14251,13 @@ GetFrame = fn36,
 })
 end
 
-str7 = ("%s  â€º  %s"):format(tabLabel, pageLabel)
+str7 = ("%s  ›  %s"):format(tabLabel, pageLabel)
 end
 
 local title = v120.Section.Title
 local tbl20 = {}
 local open = host.Open
-v120.Collect(("%s  â€º  %s"):format(str7, title), open, tbl20)
+v120.Collect(("%s  ›  %s"):format(str7, title), open, tbl20)
 local v121 = tbl20[1]
 local reveal = nil
 local getFrame = fn36
