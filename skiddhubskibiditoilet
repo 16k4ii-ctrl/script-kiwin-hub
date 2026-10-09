@@ -66540,6 +66540,16 @@ function K.Unload()
     if getgenv().KiwinHub == K then getgenv().KiwinHub = nil end
 end
 
+-- Phone executors often lack filesystem fns; shim missing ones so boot can continue (no persistence, defaults used)
+pcall(function()
+    if isfile == nil then isfile = function() return false end end
+    if isfolder == nil then isfolder = function() return false end end
+    if makefolder == nil then makefolder = function() end end
+    if readfile == nil then readfile = function() error("readfile unavailable") end end
+    if writefile == nil then writefile = function() end end
+    if listfiles == nil then listfiles = function() return {} end end
+    if delfile == nil then delfile = function() end end
+end)
 pcall(function() getgenv()._KiwinHubSetProgress(35, "Loading features...") end)
 task.wait(0.2)
 local _khBootOk, _khBootErr = pcall(function() tbl17.j1()(boot) end)
@@ -66551,7 +66561,14 @@ getgenv()._KhBootOk, getgenv()._KhBootErr = _khBootOk, _khBootErr
 if not getgenv()._KhBootOk then
     pcall(function()
         local d = getgenv()._KiwinHubLoader
-        if d and d.Gui and d.Gui.Parent then d.Status.Text = "Load failed: " .. tostring(getgenv()._KhBootErr):sub(1, 140) end
+        if d and d.Gui and d.Gui.Parent then
+            d.Status.TextWrapped = true
+            d.Status.TextSize = 11
+            d.Status.Size = UDim2.new(1, -30, 0, 110)
+            d.Status.Text = "Load failed: " .. tostring(getgenv()._KhBootErr):sub(1, 400)
+            if d.Bar and d.Bar.Parent then d.Bar.Parent.Visible = false end
+            if d.Percent then d.Percent.Visible = false end
+        end
     end)
     warn("[KiwinHub] boot failed: " .. tostring(getgenv()._KhBootErr))
 else
