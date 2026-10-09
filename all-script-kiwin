@@ -34,6 +34,13 @@ elseif PlaceId == 107778070777162 then
 elseif PlaceId == 140409475718339
     or PlaceId == 119114794144012 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/Anime-apo-kwin"))()
+
+-- rival
+elseif PlaceId == 17625359962
+    or PlaceId == 117398147513099 then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/skiddhubskibiditoilet"))()
+
 else
+     
     warn("No support: " .. PlaceId)
 end
