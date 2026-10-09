@@ -66463,7 +66463,7 @@ do
     local wrf, gca = K.fn("writefile"), K.fn("getcustomasset") or K.fn("getsynasset")
     if wrf and gca then
         local path = "kiciarebuild/lithium_logo.png"
-        local _ok = pcall(wrf, path, decode(LITHIUM_LOGO_B64))
+        local _ok = pcall(function() wrf(path, decode(LITHIUM_LOGO_B64)) end)
         local _ok2, _id = pcall(gca, path)
         --  Kicia's original logo is used; the Lithium one is no longer applied.
 -- KiwinHub logo override (Kiwin cat)
@@ -66540,11 +66540,21 @@ function K.Unload()
     if getgenv().KiwinHub == K then getgenv().KiwinHub = nil end
 end
 
-tbl17.j1()(boot)
+pcall(function() getgenv()._KiwinHubSetProgress(35, "Loading features...") end)
+task.wait(0.2)
+local _khBootOk, _khBootErr = pcall(function() tbl17.j1()(boot) end)
+getgenv()._KhBootOk, getgenv()._KhBootErr = _khBootOk, _khBootErr
 
 --==========================================================================
 --  KiwinHub finish: close loader, watermark credit, floating minimize
 --==========================================================================
+if not getgenv()._KhBootOk then
+    pcall(function()
+        local d = getgenv()._KiwinHubLoader
+        if d and d.Gui and d.Gui.Parent then d.Status.Text = "Load failed: " .. tostring(getgenv()._KhBootErr):sub(1, 140) end
+    end)
+    warn("[KiwinHub] boot failed: " .. tostring(getgenv()._KhBootErr))
+else
 pcall(function() getgenv()._KiwinHubSetProgress(100, "All KiwinHub buttons loaded") end)
 task.wait(0.25)
 pcall(function()
@@ -66624,6 +66634,14 @@ pcall(function()
         end)
     end
     getgenv()._KiwinHubFloat = b
+    -- Phone: start with menu hidden, only the cat button stays
+    pcall(function()
+        local uis = game:GetService("UserInputService")
+        if uis.TouchEnabled and not uis.KeyboardEnabled then
+            local m = getgenv()._KiwinHubMenu
+            if m and m.SetVisible then m:SetVisible(false) end
+        end
+    end)
 end)
 -- Unload rename: expose KiwinHub unload
 pcall(function()
@@ -66632,3 +66650,4 @@ pcall(function()
     end
 end)
 print("[KiwinHub] Loaded OK - press RightShift or cat button. Discord: https://discord.gg/JNuheYwQe - Made by kai")
+end
