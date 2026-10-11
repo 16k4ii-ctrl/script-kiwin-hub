@@ -5,6 +5,7 @@ if PlaceId == 77108422251420
     or PlaceId == 82626725163709
     or PlaceId == 83445806734780
     or PlaceId == 108628039999641
+    or PlaceId == 102537610748607
     or PlaceId == 382626725163709 then
     loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Newgui_needle"))()
 
