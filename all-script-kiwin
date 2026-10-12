@@ -36,6 +36,9 @@ elseif PlaceId == 140409475718339
     or PlaceId == 119114794144012 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/Anime-apo-kwin"))()
 
+elseif PlaceId == 132239307080610 then
+    loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=KIWIN_HUB_DeepFishing"))()
+
 -- rival
 elseif PlaceId == 17625359962
     or PlaceId == 117398147513099 then
