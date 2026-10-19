@@ -44,49 +44,6 @@ elseif PlaceId == 17625359962
     or PlaceId == 117398147513099 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/ue-crack"))()
 
--- Notoriety: A PAYDAY Experience (all places)
-elseif PlaceId == 21532277
-    or PlaceId == 1213821265
-    or PlaceId == 1234408990
-    or PlaceId == 1242009557
-    or PlaceId == 1269513822
-    or PlaceId == 1419274802
-    or PlaceId == 1448835396
-    or PlaceId == 1470780246
-    or PlaceId == 2088934656
-    or PlaceId == 2557847604
-    or PlaceId == 2591382751
-    or PlaceId == 3107097964
-    or PlaceId == 5431100846
-    or PlaceId == 5431104427
-    or PlaceId == 5891659534
-    or PlaceId == 6537140247
-    or PlaceId == 10605039538
-    or PlaceId == 86300559848070
-    or PlaceId == 87857140324538
-    or PlaceId == 89087447777289
-    or PlaceId == 104434907248230
-    or PlaceId == 121625668096152
-    or PlaceId == 127121302275120
-    or PlaceId == 133412855381055
-    or PlaceId == 109437205431112
-    or PlaceId == 102790642615950
-    or PlaceId == 139345672986912
-    or PlaceId == 85652807471573
-    or PlaceId == 104518339645098
-    or PlaceId == 709461761
-    or PlaceId == 1257393236
-    or PlaceId == 1549086835
-    or PlaceId == 2511620169
-    or PlaceId == 2840013718
-    or PlaceId == 77388598821201
-    or PlaceId == 85131071821739
-    or PlaceId == 88314969485711
-    or PlaceId == 88467884212296
-    or PlaceId == 129817754677038
-    or PlaceId == 134929695930697 then
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/reka"))()
-
 else
      
     warn("No support: " .. PlaceId)
