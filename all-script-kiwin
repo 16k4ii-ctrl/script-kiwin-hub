@@ -10,7 +10,7 @@ if PlaceId == 77108422251420
     loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=Newgui_needle"))()
 
 elseif PlaceId == 103363457515322
-    or PlaceId == 77239332768345
+    or PlaceId == 77239332768345 then
     loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=KIWIN_HUB_Chop"))()
 
 -- Drill to Earth Core (2 Place ID)
