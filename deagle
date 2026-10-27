@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=KIWIN_AIPlay"))()
