@@ -45,6 +45,7 @@ elseif PlaceId == 132239307080610 then
 
 -- rival
 elseif PlaceId == 17625359962
+    or PlaceId == 129604661913557
     or PlaceId == 117398147513099 then
     loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/ue-crack"))()
 
