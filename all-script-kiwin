@@ -52,7 +52,13 @@ elseif PlaceId == 17625359962
 elseif PlaceId == 84556640895285
     or PlaceId == 112087763192016 then
     loadstring(game:HttpGet("https://kiwin-api.vercel.app/api/script?key=dipenKIWIN1&file=KIWIN_AIPlay"))()
-
+elseif PlaceId == 2753915549
+    or PlaceId == 4442272183
+    or PlaceId == 7449423635
+    or PlaceId == 85211729168715
+    or PlaceId == 79091703265657
+    or PlaceId == 100117331123089 then
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/16k4ii-ctrl/script-kiwin-hub/refs/heads/main/bf"))()
 else
      
     warn("No support: " .. PlaceId)
