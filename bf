@@ -36,6 +36,16 @@ vim2 = game:GetService("VirtualUser")
 TeamSelf = plr.Team
 RunSer = game:GetService("RunService")
 Stats = game:GetService("Stats")
+Spawn = Spawn or spawn
+Wait = Wait or wait
+Pos = CFrame.new(0, 30, 0)
+AutoHaki = function()
+	pcall(function()
+		if plr.Character and not plr.Character:FindFirstChild("HasBuso") then
+			replicated.Remotes.CommF_:InvokeServer("Buso")
+		end
+	end)
+end
 Energy = plr.Character.Energy.Value
 BringConnections = {}
 BossList = {}
@@ -255,7 +265,15 @@ do
 end
 
 t9.Pos = function(p4, p5)
-	return (Root.Position - mode.Position).Magnitude <= p5
+	if typeof(p4) == "CFrame" then
+		p4 = p4.Position
+	end
+
+	if typeof(p4) ~= "Vector3" then
+		return false
+	end
+
+	return (Root.Position - p4).Magnitude <= p5
 end
 t9.Dist = function(p6, p7)
 	return (Root.Position - p6:FindFirstChild("HumanoidRootPart").Position).Magnitude <= p7
@@ -2293,7 +2311,7 @@ local lib = (function()
 
     local TITLE = "KIWIN HUB"
     local SUBTITLE = "https://discord.gg/whwAURE25"
-    local CREDIT = "Kai"
+    local CREDIT = "kai"
     local CAT_LOGO = "rbxassetid://115528029499362"
     
     local RED = Color3.fromRGB(255, 25, 25)
@@ -2583,25 +2601,17 @@ local lib = (function()
         loaderGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
         loaderGui.Parent = playerGui
 
-        local backdrop = Instance.new("Frame")
-        backdrop.BackgroundColor3 = BG
-        backdrop.BorderSizePixel = 0
-        backdrop.Size = UDim2.fromScale(1, 1)
-        backdrop.ZIndex = 1
-        backdrop.Active = true
-        backdrop.Parent = loaderGui
-
         local card = Instance.new("Frame")
         card.BackgroundColor3 = CARD
         card.BorderSizePixel = 0
-        card.AnchorPoint = Vector2.new(0.5, 0.5)
-        card.Position = UDim2.fromScale(0.5, 0.5)
-        card.Size = UDim2.fromOffset(380, 310)
+        card.AnchorPoint = Vector2.new(0.5, 0)
+        card.Position = UDim2.new(0.5, 0, 0, 14)
+        card.Size = UDim2.fromOffset(330, 92)
         card.ZIndex = 2
-        card.Active = true
+        card.Active = false
         card.Parent = loaderGui
 
-        corner(card, 14)
+        corner(card, 12)
         stroke(card, RED, 2)
 
         local logo = Instance.new("ImageLabel")
@@ -2609,9 +2619,8 @@ local lib = (function()
         logo.Image = CAT_LOGO
         logo.ImageColor3 = WHITE
         logo.ScaleType = Enum.ScaleType.Fit
-        logo.AnchorPoint = Vector2.new(0.5, 0)
-        logo.Position = UDim2.new(0.5, 0, 0, 18)
-        logo.Size = UDim2.fromOffset(130, 130)
+        logo.Position = UDim2.fromOffset(12, 14)
+        logo.Size = UDim2.fromOffset(64, 64)
         logo.ZIndex = 3
         logo.Parent = card
 
@@ -2620,10 +2629,10 @@ local lib = (function()
         title.Text = TITLE
         title.TextColor3 = WHITE
         title.Font = Enum.Font.GothamBold
-        title.TextSize = 24
-        title.AnchorPoint = Vector2.new(0.5, 0)
-        title.Position = UDim2.new(0.5, 0, 0, 154)
-        title.Size = UDim2.new(1, -30, 0, 30)
+        title.TextSize = 20
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Position = UDim2.fromOffset(88, 10)
+        title.Size = UDim2.new(1, -100, 0, 24)
         title.ZIndex = 3
         title.Parent = card
 
@@ -2632,23 +2641,23 @@ local lib = (function()
         status.Text = "Initializing..."
         status.TextColor3 = GRAY
         status.Font = Enum.Font.Gotham
-        status.TextSize = 13
-        status.AnchorPoint = Vector2.new(0.5, 0)
-        status.Position = UDim2.new(0.5, 0, 0, 192)
-        status.Size = UDim2.new(1, -30, 0, 22)
+        status.TextSize = 12
+        status.TextXAlignment = Enum.TextXAlignment.Left
+        status.TextTruncate = Enum.TextTruncate.AtEnd
+        status.Position = UDim2.fromOffset(88, 34)
+        status.Size = UDim2.new(1, -100, 0, 16)
         status.ZIndex = 3
         status.Parent = card
 
         local barBack = Instance.new("Frame")
         barBack.BackgroundColor3 = LINE
         barBack.BorderSizePixel = 0
-        barBack.AnchorPoint = Vector2.new(0.5, 0)
-        barBack.Position = UDim2.new(0.5, 0, 0, 224)
-        barBack.Size = UDim2.fromOffset(300, 8)
+        barBack.Position = UDim2.fromOffset(88, 56)
+        barBack.Size = UDim2.new(1, -150, 0, 6)
         barBack.ZIndex = 3
         barBack.Parent = card
 
-        corner(barBack, 4)
+        corner(barBack, 3)
 
         local bar = Instance.new("Frame")
         bar.BackgroundColor3 = RED
@@ -2657,7 +2666,7 @@ local lib = (function()
         bar.ZIndex = 4
         bar.Parent = barBack
 
-        corner(bar, 4)
+        corner(bar, 3)
 
         local percent = Instance.new("TextLabel")
         percent.BackgroundTransparency = 1
@@ -2667,8 +2676,8 @@ local lib = (function()
         percent.TextSize = 12
         percent.TextXAlignment = Enum.TextXAlignment.Right
         percent.AnchorPoint = Vector2.new(1, 0)
-        percent.Position = UDim2.new(1, -40, 0, 238)
-        percent.Size = UDim2.fromOffset(60, 20)
+        percent.Position = UDim2.new(1, -12, 0, 51)
+        percent.Size = UDim2.fromOffset(46, 16)
         percent.ZIndex = 3
         percent.Parent = card
 
@@ -2678,9 +2687,9 @@ local lib = (function()
         credit.TextColor3 = GRAY
         credit.Font = Enum.Font.Gotham
         credit.TextSize = 11
-        credit.AnchorPoint = Vector2.new(0.5, 0)
-        credit.Position = UDim2.new(0.5, 0, 1, -30)
-        credit.Size = UDim2.new(1, -30, 0, 18)
+        credit.TextXAlignment = Enum.TextXAlignment.Left
+        credit.Position = UDim2.fromOffset(88, 68)
+        credit.Size = UDim2.new(1, -100, 0, 14)
         credit.ZIndex = 3
         credit.Parent = card
 
@@ -3697,6 +3706,7 @@ local lib = (function()
 
         local header = frame(main, BG, UDim2.fromOffset(0, 0), UDim2.new(1, 0, 0, 64))
         header.BackgroundTransparency = 1
+        header.Active = true
 
         makeIcon(header, CAT_LOGO, WHITE, UDim2.fromOffset(10, 3), UDim2.fromOffset(58, 58))
 
@@ -4007,7 +4017,7 @@ local lib = (function()
             return Tab
         end
 
-        task.delay(40, function()
+        task.delay(25, function()
             if not finished then
                 pcall(function() Library:Finish() end)
             end
@@ -4222,7 +4232,7 @@ local lib = (function()
 end)()
 local v237 = lib:CreateWindow({
 	Title = "KIWIN HUB",
-	Subtitle = "https://discord.gg/xXZStK2WZ",
+	Subtitle = "https://discord.gg/whwAURE25",
 	Image = "rbxassetid://115528029499362"
 })
 local t15 = {
@@ -6496,7 +6506,7 @@ do
 		Text = "Accept Quests",
 		Default = false,
 		Callback = function(p96)
-			_G.AcceptQuestBoss = p96
+			_G.AcceptQuestC = p96
 		end
 	})
 end
@@ -6924,7 +6934,7 @@ do
 		Text = "Accept Quests",
 		Default = false,
 		Callback = function(p102)
-			_G.AcceptQuestBoss = p102
+			_G.AcceptQuestB = p102
 		end
 	})
 end
@@ -13055,7 +13065,8 @@ do
 
 						if GetM("Vampire Fang") >= 20 and GetM("Demonic Wisp") >= 20 and GetM("Dark Fragment") <= 1 then
 							if World2 then
-								if GetConnectionEnemies("Darkbeard") then
+								local black = GetConnectionEnemies("Darkbeard")
+if black then
 									while true do
 										task.wait()
 										t9.Kill(black, _G.Snaguine)
@@ -13182,6 +13193,43 @@ spawn(function()
 		end
 	end
 end)
+UpdateIslandMirageESP = function()
+	for _, child in pairs(workspace._WorldOrigin.Locations:GetChildren()) do
+		pcall(function()
+			if child.Name == "Mirage Island" then
+				if MirageIslandESP then
+					local distance = math.floor((plr.Character.Head.Position - child.Position).Magnitude / 3)
+
+					if child:FindFirstChild("NameEsp") then
+						child.NameEsp.TextLabel.Text = child.Name .. "   \n" .. distance .. " M"
+					else
+						local BillboardGui = Instance.new("BillboardGui", child)
+
+						BillboardGui.Name = "NameEsp"
+						BillboardGui.ExtentsOffset = Vector3.new(0, 1, 0)
+						BillboardGui.Size = UDim2.new(1, 200, 1, 30)
+						BillboardGui.Adornee = child
+						BillboardGui.AlwaysOnTop = true
+
+						local TextLabel = Instance.new("TextLabel", BillboardGui)
+
+						TextLabel.Font = "Code"
+						TextLabel.FontSize = "Size14"
+						TextLabel.TextWrapped = true
+						TextLabel.Size = UDim2.new(1, 0, 1, 0)
+						TextLabel.TextYAlignment = "Top"
+						TextLabel.BackgroundTransparency = 1
+						TextLabel.TextStrokeTransparency = 0.5
+						TextLabel.TextColor3 = Color3.fromRGB(80, 245, 245)
+						TextLabel.Text = child.Name .. "   \n" .. distance .. " M"
+					end
+				elseif child:FindFirstChild("NameEsp") then
+					child:FindFirstChild("NameEsp"):Destroy()
+				end
+			end
+		end)
+	end
+end
 GRP_Race_Mystic_Island_Full_Moon:AddToggle("Esp_Mirage_Island", {
 	Text = "Esp Mirage Island",
 	Default = false,
@@ -13217,7 +13265,7 @@ spawn(function()
 			if _G.AutoMysticIsland then
 				for _, child in pairs(game:GetService("Workspace")._WorldOrigin.Locations:GetChildren()) do
 					if child.Name == "Mirage Island" then
-						topos(child.CFrame * CFrame.new(0, 333, 0))
+						_tp(child.CFrame * CFrame.new(0, 333, 0))
 					end
 				end
 			end
@@ -13484,7 +13532,7 @@ GRP_Race_Mystic_Island_Full_Moon:AddToggle("Auto_Look_At_Moon", {
 	Text = "Auto Look At Moon",
 	Default = false,
 	Callback = function(p226)
-		_G.Auto_Mink = p226
+		LookM = p226
 	end
 })
 MoveCamtoMoon = function()
@@ -13525,9 +13573,9 @@ task.spawn(function()
 		if LookMV3 then
 			MoveCamtoMoon()
 			replicated.Remotes.CommE:FireServer("ActivateAbility")
-			UIS:SendKeyEvent(true, "T", true, game)
+			vim1:SendKeyEvent(true, "T", true, game)
 			wait(0.5)
-			UIS:SendKeyEvent(false, "T", true, game)
+			vim1:SendKeyEvent(false, "T", true, game)
 		end
 	end
 end)
@@ -14537,8 +14585,9 @@ do
 	DojoQ = GRP_Prehistoric_Dojo_Quest:AddToggle("Auto_Dojo_Trainer", {
 		Text = "Auto Dojo Trainer",
 		Default = false,
-		Callback = function()
-		end
+		Callback = function(pDojo)
+_G.Dojoo = pDojo
+end
 	})
 end
 
@@ -28088,7 +28137,7 @@ do
 		Text = "Craft Volcanic Magnet",
 		Default = false,
 		Callback = function(p251)
-			_G.Prehis_Find = p251
+			getgenv().AutoCraftVolcanic = p251
 		end
 	})
 end
@@ -30557,6 +30606,17 @@ Q = GRP_Raids_Dungeon_Event_Raiding:AddToggle("Auto_Select_Dungeon_Chip", {
 		_G.AutoSelectDungeon = p303
 	end
 })
+task.spawn(function()
+	while task.wait(1) do
+		if _G.AutoSelectDungeon then
+			pcall(function()
+				if not GetBP("Special Microchip") then
+					game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("RaidsNpc", "Select", _G.SelectChip)
+				end
+			end)
+		end
+	end
+end)
 GRP_Raids_Dungeon_Event_Raiding:AddToggle("Get_Fruit_In_Inventory_Below_1M", {
 	Text = "Get Fruit In Inventory Below 1M",
 	Default = false,
@@ -30603,20 +30663,42 @@ end
 GRP_Raids_Dungeon_Event_Raiding:AddButton({
 	Text = "Buy Dungeon Chips [Beli]",
 	Func = function()
-	end
+pcall(function()
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("RaidsNpc", "Select", _G.SelectChip)
+end)
+end
 })
 GRP_Raids_Dungeon_Event_Raiding:AddButton({
 	Text = "Buy Dungeon Chips [Devil Fruit]",
 	Func = function()
+pcall(function()
+	local CommF = game:GetService("ReplicatedStorage").Remotes.CommF_
+	local response = CommF:InvokeServer("GetFruits")
+	local fruitName
+
+	for _, fruit in pairs(response) do
+		if fruit.Price <= 490000 then
+			fruitName = fruit.Name
+
+			break
+		end
 	end
+
+	if fruitName then
+		CommF:InvokeServer("LoadFruit", tostring(fruitName))
+		CommF:InvokeServer("RaidsNpc", "Select", _G.SelectChip)
+	end
+end)
+end
 })
 
 do
 	AutoChipBeli = GRP_Raids_Dungeon_Event_Raiding:AddToggle("Auto_Buy_Chip_[Beli]", {
 		Text = "Auto Buy Chip [Beli]",
 		Default = false,
-		Callback = function()
-		end
+		Callback = function(pChip)
+_G.AutoChipBeli = pChip
+end
 	})
 end
 
@@ -30833,14 +30915,20 @@ GRP_Raids_Items_Law_Order_Sword = t15.Raids:AddLeftGroupbox("Law / Order Sword I
 GRP_Raids_Items_Law_Order_Sword:AddButton({
 	Text = "Buy Microchip Law",
 	Func = function()
-	end
+pcall(function()
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BlackbeardReward", "Microchip", "2")
+end)
+end
 })
 
 do
 	GRP_Raids_Items_Law_Order_Sword:AddButton({
 		Text = "Start Law Raids",
 		Func = function()
-		end
+pcall(function()
+fireclickdetector(workspace.Map.CircleIsland.RaidSummon.Button.Main.ClickDetector)
+end)
+end
 	})
 end
 
@@ -30848,7 +30936,7 @@ GRP_Raids_Items_Law_Order_Sword:AddToggle("Auto_Buy_Microchip_Law", {
 	Text = "Auto Buy Microchip Law",
 	Default = false,
 	Callback = function(p310)
-		_G.AutoLawKak = p310
+		getgenv().AutoBuyMicrochipLaw = p310
 	end
 })
 
@@ -31340,7 +31428,7 @@ task.spawn(function()
 					local players, v1383 = ply:GetPlayers()
 
 					for _, v1 in next, players, v1383 do
-						if v1 ~= LocalPlayer2 and v1.Character then
+						if v1 ~= LocalPlayer2 and v1.Character and not (_G.NoAimTeam and v1.Team == LocalPlayer2.Team) then
 							if v1.Character:FindFirstChild("Head") and _G.AimCam and v1.Character.Humanoid.Health > 0 then
 								local Magnitude = (v1.Character.Head.Position - LocalPlayer2.Character.Head.Position).Magnitude
 
@@ -31357,11 +31445,13 @@ task.spawn(function()
 
 				while true do
 					task.wait()
-					CurrentCamera.CFrame = CFrame.new(CurrentCamera.CFrame.Position, closestplayer().Character.HumanoidRootPart.Position)
+					local aimTarget = closestplayer()
+
+					if aimTarget and aimTarget.Character and aimTarget.Character:FindFirstChild("HumanoidRootPart") then
+						CurrentCamera.CFrame = CFrame.new(CurrentCamera.CFrame.Position, aimTarget.Character.HumanoidRootPart.Position)
+					end
 
 					if _G.AimCam == false then
-						break
-					elseif dist < Mag then
 						break
 					end
 				end
@@ -31375,7 +31465,10 @@ do
 	GRP_Combat_Quests_Players:AddButton({
 		Text = "Get player quests",
 		Func = function()
-		end
+pcall(function()
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("PlayerHunter")
+end)
+end
 	})
 end
 
@@ -31757,6 +31850,14 @@ do
 			end
 		end
 	end
+
+	task.spawn(function()
+		while task.wait(0.5) do
+			if getgenv().DodgeNoCD then
+				pcall(v1421)
+			end
+		end
+	end)
 end
 
 do
@@ -31863,7 +31964,10 @@ do
 	GRP_Travel_Travel_Worlds:AddButton({
 		Text = "Travel East Blue (World 1)",
 		Func = function()
-		end
+pcall(function()
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelMain")
+end)
+end
 	})
 end
 
@@ -31871,7 +31975,10 @@ do
 	GRP_Travel_Travel_Worlds:AddButton({
 		Text = "Travel Dressrosa (World 2)",
 		Func = function()
-		end
+pcall(function()
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelDressrosa")
+end)
+end
 	})
 end
 
@@ -31879,7 +31986,10 @@ do
 	GRP_Travel_Travel_Worlds:AddButton({
 		Text = "Travel Zou (World 3)",
 		Func = function()
-		end
+pcall(function()
+game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("TravelZou")
+end)
+end
 	})
 end
 
@@ -31965,7 +32075,24 @@ do
 	GRP_Travel_Travel_Portal:AddButton({
 		Text = "Request Entrance",
 		Func = function()
-		end
+local portals = {
+	["Sky"] = Vector3.new(-7894, 5547, -380),
+	["UnderWater"] = Vector3.new(61163.8515625, 11.6796875, 1819.7841796875),
+	["SwanRoom"] = Vector3.new(2285, 15, 905),
+	["Cursed Ship"] = Vector3.new(923.21252441406, 126.9760055542, 32852.83203125),
+	["Castle On The Sea"] = Vector3.new(-5072.08984375, 314.5412902832, -3151.1098632812),
+	["Mansion Cafe"] = Vector3.new(-12471.169921875, 374.94024658203, -7551.677734375),
+	["Hydra Teleport"] = Vector3.new(5748.7587890625, 610.44982910156, -267.81704711914),
+	["Temple of Time"] = Vector3.new(28286, 14897, 103)
+}
+local destination = portals[_G.Island_PT]
+
+if destination then
+	pcall(function()
+		game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", destination)
+	end)
+end
+end
 	})
 end
 
@@ -31981,7 +32108,7 @@ do
 		Values = NPCList,
 		Default = 1,
 		Callback = function(p342)
-			_G.TPNpc = p342
+			_G.SelectNPC = p342
 		end
 	})
 end
@@ -32001,7 +32128,7 @@ spawn(function()
 		if _G.TPNpc then
 			pcall(function()
 				for _, child in pairs(ReplicatedStorage2.NPCs:GetChildren()) do
-					if child.Name == NPClist then
+					if child.Name == _G.SelectNPC then
 						_tp(child.HumanoidRootPart.CFrame)
 					end
 				end
@@ -32538,7 +32665,7 @@ do
 		Default = "",
 		Placeholder = "Job ID",
 		Callback = function(p347)
-			_G.Rechat = p347
+			_G.JobIdInput = p347
 		end
 	})
 end
@@ -32546,8 +32673,8 @@ end
 GRP_Misc_Server_Function:AddButton({
 	Text = "Teleport [Job ID]",
 	Func = function()
-		if _G.Rechat and _G.Rechat ~= "" then
-			game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, _G.Rechat, LocalPlayer2)
+		if _G.JobIdInput and _G.JobIdInput ~= "" then
+			game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, _G.JobIdInput, LocalPlayer2)
 		end
 	end
 })
@@ -32856,7 +32983,26 @@ briggt1 = GRP_Misc_Configure_God:AddToggle("Turn_on_Full_Bright", {
 	Text = "Turn on Full Bright",
 	Default = false,
 	Callback = function(p353)
-		_G.SelectDN = p353
+		_G.FullBright = p353
+
+		if p353 then
+			task.spawn(function()
+				while _G.FullBright do
+					pcall(function()
+						game.Lighting.Brightness = 2
+						game.Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+						game.Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+						game.Lighting.FogEnd = 100000
+						game.Lighting.GlobalShadows = false
+					end)
+					task.wait(0.5)
+				end
+
+				pcall(function()
+					game.Lighting.GlobalShadows = true
+				end)
+			end)
+		end
 	end
 })
 DayN = GRP_Misc_Configure_God:AddDropdown("Select_Time", {
